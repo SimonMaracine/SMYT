@@ -15,7 +15,7 @@ static void packet(unsigned char*, const struct pcap_pkthdr* header, const unsig
 
 int main(int argc, char** argv) {
     if (std::signal(SIGINT, signal_handler) == SIG_ERR) {
-        std::cerr << "Error singal\n";
+        std::cerr << "Error signal\n";
         return 1;
     }
 
