@@ -87,12 +87,22 @@
 
 #include "capture.hpp"
 #include "error.hpp"
+#include "args.hpp"
 
 static void signal_handler(int) {
     capture::break_loop();
 }
 
 int main(int argc, char** argv) {
+    args::Arugments arguments;
+
+    try {
+        arguments = args::process_arguments(argc, argv);
+    } catch (const error::ArgsError& e) {
+        std::cerr << e.what() << '\n';
+        return 1;
+    }
+
     if (std::signal(SIGINT, signal_handler) == SIG_ERR) {
         std::cerr << "Could not setup interrupt handler\n";
         return 1;
@@ -105,8 +115,15 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    capture::start_session();
+    try {
+        capture::start_session(arguments.device);
+    } catch (const error::PcapError& e) {
+        capture::stop_session();  // TODO don't call this here
+        return 1;
+    }
+
     capture::capture_loop();
+
     capture::stop_session();
 
     capture::uninitialize();

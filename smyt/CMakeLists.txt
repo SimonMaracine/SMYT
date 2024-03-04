@@ -1,8 +1,11 @@
 cmake_minimum_required(VERSION 3.20)
 
 add_executable(smyt
+    "src/args.cpp"
+    "src/args.hpp"
     "src/capture.cpp"
     "src/capture.hpp"
+    "src/error.hpp"
     "src/main.cpp"
 )
 

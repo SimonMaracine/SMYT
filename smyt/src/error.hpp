@@ -8,4 +8,9 @@ namespace error {
         explicit PcapError(const std::string& message)
             : std::runtime_error(message) {}
     };
+
+    struct ArgsError : public std::runtime_error {
+        explicit ArgsError(const std::string& message)
+            : std::runtime_error(message) {}
+    };
 }
