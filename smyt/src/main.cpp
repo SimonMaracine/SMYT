@@ -89,36 +89,39 @@
 #include "error.hpp"
 #include "args.hpp"
 
+static const char* smyt {"smyt: "};
+
 static void signal_handler(int) {
     capture::break_loop();
 }
 
 int main(int argc, char** argv) {
-    args::Arugments arguments;
+    args::Arguments arguments;
 
     try {
         arguments = args::process_arguments(argc, argv);
     } catch (const error::ArgsError& e) {
-        std::cerr << e.what() << '\n';
+        std::cerr << smyt << e.what() << '\n';
+        args::print_help();
         return 1;
     }
 
     if (std::signal(SIGINT, signal_handler) == SIG_ERR) {
-        std::cerr << "Could not setup interrupt handler\n";
+        std::cerr << smyt << "Could not setup interrupt handler\n";
         return 1;
     }
 
     try {
         capture::initialize();
     } catch (const error::PcapError& e) {
-        std::cerr << e.what() << '\n';
+        std::cerr << smyt << e.what() << '\n';
         return 1;
     }
 
     try {
         capture::start_session(arguments.device);
     } catch (const error::PcapError& e) {
-        capture::stop_session();  // TODO don't call this here
+        std::cerr << smyt << e.what() << '\n';
         return 1;
     }
 

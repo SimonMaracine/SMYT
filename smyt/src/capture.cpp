@@ -9,19 +9,7 @@
 namespace capture {
     static pcap_t* g_handle {nullptr};
 
-    void initialize() {
-        char err_msg[PCAP_ERRBUF_SIZE];
-
-        if (pcap_init(PCAP_CHAR_ENC_UTF_8, err_msg) == PCAP_ERROR) {
-            throw error::PcapError("Could not initialize pcap: " + std::string(err_msg));
-        }
-    }
-
-    void uninitialize() {
-
-    }
-
-    void start_session(const std::string& device) {
+    static void start_capture_session(const std::string& device) {
         char err_msg[PCAP_ERRBUF_SIZE];
 
         pcap_t* handle {pcap_create(device.c_str(), err_msg)};
@@ -64,6 +52,31 @@ namespace capture {
             if (result != DLT_EN10MB) {
                 throw error::PcapError("Error datalink");
             }
+        }
+    }
+
+    void initialize() {
+        char err_msg[PCAP_ERRBUF_SIZE];
+
+        if (pcap_init(PCAP_CHAR_ENC_UTF_8, err_msg) == PCAP_ERROR) {
+            throw error::PcapError("Could not initialize pcap: " + std::string(err_msg));
+        }
+    }
+
+    void uninitialize() {
+
+    }
+
+    void start_session(const std::string& device) {
+        if (device.empty()) {
+            // TODO automatically pick one
+        }
+
+        try {
+            start_capture_session(device);
+        } catch (const error::PcapError&) {
+            stop_session();
+            throw;
         }
     }
 

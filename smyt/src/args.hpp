@@ -3,10 +3,10 @@
 #include <string>
 
 namespace args {
-    struct Arugments {
+    struct Arguments {
         std::string device;
     };
 
-    Arugments process_arguments(int argc, char** argv);
+    Arguments process_arguments(int argc, char** argv);
     void print_help();
 }
