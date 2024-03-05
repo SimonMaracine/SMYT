@@ -7,6 +7,8 @@ add_executable(smyt
     "src/capture.hpp"
     "src/error.hpp"
     "src/main.cpp"
+    "src/packet.cpp"
+    "src/packet.hpp"
 )
 
 target_include_directories(smyt PUBLIC "src")

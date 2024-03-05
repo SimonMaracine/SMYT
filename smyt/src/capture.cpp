@@ -1,10 +1,19 @@
 #include "capture.hpp"
 
-#include <iostream>
+#include <cassert>
 
 #include <pcap/pcap.h>
 
 #include "error.hpp"
+#include "packet.hpp"
+
+/*
+    main https://www.tcpdump.org/manpages/libpcap-1.10.4/pcap.3pcap.html
+    loop https://www.tcpdump.org/manpages/libpcap-1.10.4/pcap_loop.3pcap.html
+    break https://www.tcpdump.org/manpages/libpcap-1.10.4/pcap_breakloop.3pcap.html
+    link layer https://www.tcpdump.org/linktypes.html
+    error msg https://www.tcpdump.org/manpages/libpcap-1.10.4/pcap_statustostr.3pcap.html
+*/
 
 namespace capture {
     static pcap_t* g_handle {nullptr};
@@ -40,9 +49,9 @@ namespace capture {
             const int result {pcap_activate(handle)};
 
             if (result > 0) {
-                throw error::PcapError("Warning activating device `" + device + "`: " + std::to_string(result));
+                throw error::PcapError("Warning activating device `" + device + "`: " + pcap_statustostr(result));
             } if (result < 0) {
-                throw error::PcapError("Could not activate device `" + device + "`: " + std::to_string(result));
+                throw error::PcapError("Could not activate device `" + device + "`: " + pcap_statustostr(result));
             }
         }
 
@@ -86,12 +95,24 @@ namespace capture {
     }
 
     void capture_loop() {
+        const int result {pcap_loop(g_handle, -1, packet::process_packet, nullptr)};
 
+        if (result >= 0) {
+            assert(false);
+        } else if (result == PCAP_ERROR_BREAK) {
+            return;
+        } else {
+            throw error::PcapError("An error occurred while capturing: " + std::string(pcap_geterr(g_handle)));
+        }
     }
 
     void break_loop() {
         if (g_handle != nullptr) {
             pcap_breakloop(g_handle);
         }
+    }
+
+    const char* get_library_version() {
+        return pcap_lib_version();
     }
 }

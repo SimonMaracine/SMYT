@@ -11,4 +11,6 @@ namespace capture {
 
     void capture_loop();
     void break_loop();
+
+    const char* get_library_version();
 }

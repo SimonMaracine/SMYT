@@ -18,7 +18,8 @@ namespace args {
 
     void print_help() {
         std::cout << (
-R"(usage:
+R"(
+usage:
     smyt <device>
 )"
         );
