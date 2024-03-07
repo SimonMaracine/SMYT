@@ -13,10 +13,21 @@
     break https://www.tcpdump.org/manpages/libpcap-1.10.4/pcap_breakloop.3pcap.html
     link layer https://www.tcpdump.org/linktypes.html
     error msg https://www.tcpdump.org/manpages/libpcap-1.10.4/pcap_statustostr.3pcap.html
+    packet timeout https://www.tcpdump.org/manpages/libpcap-1.10.4/pcap_set_timeout.3pcap.html
+    buffer size https://www.tcpdump.org/manpages/libpcap-1.10.4/pcap_set_buffer_size.3pcap.html
+
+    ethernet https://en.wikipedia.org/wiki/Ethernet_frame
+    tcp min size https://superuser.com/questions/243008/whats-the-minimum-size-of-a-tcp-packet
 */
 
 namespace capture {
     static pcap_t* g_handle {nullptr};
+
+    static constexpr int SNAPLEN {64};
+    static constexpr int BUFFER_SIZE {8192};
+    static constexpr int TIMEOUT {1500};
+
+    // 8192 / 64 = 128 packets in buffer
 
     static void start_capture_session(const std::string& device) {
         char err_msg[PCAP_ERRBUF_SIZE];
@@ -29,20 +40,28 @@ namespace capture {
 
         g_handle = handle;
 
-        if (pcap_set_snaplen(handle, 65535) == PCAP_ERROR_ACTIVATED) {  // TODO
-            throw error::PcapError("Could not set snaplen\n");
-        }
-
         if (pcap_set_promisc(handle, 1) == PCAP_ERROR_ACTIVATED) {
             throw error::PcapError("Could not set promisc\n");
         }
 
-        if (pcap_set_timeout(handle, 1000) == PCAP_ERROR_ACTIVATED) {
-            throw error::PcapError("Could not set timeout\n");
+        // Enable buffering
+        if (pcap_set_immediate_mode(handle, 0) == PCAP_ERROR_ACTIVATED) {
+            throw error::PcapError("Could not set immediate mode\n");
         }
 
-        if (pcap_set_buffer_size(handle, 4096) == PCAP_ERROR_ACTIVATED) {
+        // Set maximum snapshot length, as we only care about TCP
+        if (pcap_set_snaplen(handle, SNAPLEN) == PCAP_ERROR_ACTIVATED) {
+            throw error::PcapError("Could not set snaplen\n");
+        }
+
+        // Set the buffer size of the packets
+        if (pcap_set_buffer_size(handle, BUFFER_SIZE) == PCAP_ERROR_ACTIVATED) {
             throw error::PcapError("Could not set buffer size\n");
+        }
+
+        // Process packets every in bursts
+        if (pcap_set_timeout(handle, TIMEOUT) == PCAP_ERROR_ACTIVATED) {
+            throw error::PcapError("Could not set timeout\n");
         }
 
         {
