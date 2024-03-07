@@ -2,6 +2,7 @@
 #include <csignal>
 #include <optional>
 #include <string>
+#include <cassert>
 
 #include "capture.hpp"
 #include "error.hpp"
@@ -29,17 +30,7 @@ static std::optional<std::string> choose_device(
     return std::nullopt;
 }
 
-int main(int argc, char** argv) {
-    args::Arguments arguments;
-
-    try {
-        arguments = args::process_arguments(argc, argv);
-    } catch (const error::ArgsError& e) {
-        std::cerr << smyt << e.what() << '\n';
-        args::print_help();
-        return 1;
-    }
-
+static int capture_main(const args::Arguments& arguments) {
     if (std::signal(SIGINT, signal_handler) == SIG_ERR) {
         std::cerr << smyt << "Could not setup interrupt handler\n";
         return 1;
@@ -80,4 +71,30 @@ int main(int argc, char** argv) {
     std::cout << std::endl;
 
     return 0;
+}
+
+int main(int argc, char** argv) {
+    args::Arguments arguments;
+
+    try {
+        arguments = args::process_arguments(argc, argv);
+    } catch (const error::ArgsError& e) {
+        std::cerr << smyt << e.what() << '\n';
+        args::print_help();
+        return 1;
+    }
+
+    switch (arguments.action) {
+        case args::Action::None:
+            assert(false);
+            break;
+        case args::Action::Capture:
+            return capture_main(arguments);
+        case args::Action::Help:
+            args::print_help();
+            break;
+        case args::Action::Version:
+            args::print_version();
+            break;
+    }
 }

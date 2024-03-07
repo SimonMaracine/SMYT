@@ -1,0 +1,3 @@
+[submodule "extern/cargs"]
+	path = extern/cargs
+	url = https://github.com/SimonMaracine/cargs

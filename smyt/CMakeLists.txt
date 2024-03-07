@@ -21,8 +21,10 @@ else()
     message(WARNING "Compiler is not MSVC or platform is not supported, warnings are not enabled")
 endif()
 
-target_compile_features(smyt PRIVATE cxx_std_17)
+target_compile_features(smyt PRIVATE cxx_std_20)
 set_target_properties(smyt PROPERTIES CXX_EXTENSIONS OFF)
+
+target_link_libraries(smyt PRIVATE cargs)
 
 # Linux only for now
 target_link_libraries(smyt PRIVATE "-lpcap")
