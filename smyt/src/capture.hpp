@@ -10,7 +10,7 @@ namespace capture {
         // TODO flags
     };
 
-    void initialize(std::optional<Device>& default_device);
+    std::optional<Device> initialize();
     void uninitialize();
 
     void start_session(const std::string& device);

@@ -86,10 +86,10 @@ namespace capture {
         }
     }
 
-    static std::vector<Device> process_devices_and_get_default(pcap_if_t* devs) {
+    static std::vector<Device> process_devices_and_get_default(const pcap_if_t* devs) {
         std::vector<Device> result;
 
-        pcap_if_t* dev {devs};
+        const pcap_if_t* dev {devs};
 
         while (dev != nullptr) {
             Device device;
@@ -107,7 +107,7 @@ namespace capture {
         return result;
     }
 
-    void initialize(std::optional<Device>& default_device) {
+    std::optional<Device> initialize() {
         char err_msg[PCAP_ERRBUF_SIZE];
 
         if (pcap_init(PCAP_CHAR_ENC_UTF_8, err_msg) < 0) {
@@ -121,8 +121,8 @@ namespace capture {
         }
 
         if (devs == nullptr) {
-            // This means no default device
-            default_device = std::nullopt;
+            // No default device
+            return std::nullopt;
         }
 
         const auto devices {process_devices_and_get_default(devs)};
@@ -131,8 +131,8 @@ namespace capture {
 
         assert(!devices.empty());
 
-        // Pick the first one
-        default_device = devices.front();
+        // The first one should be fine
+        return devices.front();
     }
 
     void uninitialize() {

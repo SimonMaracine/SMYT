@@ -48,7 +48,7 @@ int main(int argc, char** argv) {
     std::optional<capture::Device> default_device;
 
     try {
-        capture::initialize(default_device);
+        default_device = capture::initialize();
     } catch (const error::PcapError& e) {
         std::cerr << smyt << e.what() << '\n';
         return 1;
@@ -62,6 +62,7 @@ int main(int argc, char** argv) {
     }
 
     std::cout << capture::get_library_version() << '\n';
+    std::cout << "Capturing on device " << *device << '\n';
 
     try {
         capture::start_session(*device);
