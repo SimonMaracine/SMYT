@@ -94,7 +94,10 @@ namespace capture {
         while (dev != nullptr) {
             Device device;
             device.name = dev->name;
-            device.description = dev->description;
+
+            if (dev->description != nullptr) {
+                device.description = dev->description;
+            }
 
             result.push_back(std::move(device));
 

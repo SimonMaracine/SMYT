@@ -25,4 +25,4 @@ target_compile_features(smyt PRIVATE cxx_std_17)
 set_target_properties(smyt PROPERTIES CXX_EXTENSIONS OFF)
 
 # Linux only for now
-target_link_options(smyt PRIVATE "-lpcap")
+target_link_libraries(smyt PRIVATE "-lpcap")
