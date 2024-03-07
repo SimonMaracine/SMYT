@@ -6,12 +6,14 @@
 
 namespace args {
     Arguments process_arguments(int argc, char** argv) {
-        if (argc != 2) {
-            throw error::ArgsError("Invalid arguments: expected 2, got " + std::to_string(argc));
+        Arguments result;
+
+        if (argc > 1) {
+            result.device = argv[1u];
         }
 
-        Arguments result;
-        result.device = argv[1u];
+        // TODO remove
+        // throw error::ArgsError("Invalid arguments: expected 2, got " + std::to_string(argc));
 
         return result;
     }

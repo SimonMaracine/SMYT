@@ -1,6 +1,8 @@
 #include "capture.hpp"
 
 #include <cassert>
+#include <vector>
+#include <utility>
 
 #include <pcap/pcap.h>
 
@@ -15,6 +17,7 @@
     error msg https://www.tcpdump.org/manpages/libpcap-1.10.4/pcap_statustostr.3pcap.html
     packet timeout https://www.tcpdump.org/manpages/libpcap-1.10.4/pcap_set_timeout.3pcap.html
     buffer size https://www.tcpdump.org/manpages/libpcap-1.10.4/pcap_set_buffer_size.3pcap.html
+    devices https://www.tcpdump.org/manpages/libpcap-1.10.4/pcap_findalldevs.3pcap.html
 
     ethernet https://en.wikipedia.org/wiki/Ethernet_frame
     tcp min size https://superuser.com/questions/243008/whats-the-minimum-size-of-a-tcp-packet
@@ -83,12 +86,50 @@ namespace capture {
         }
     }
 
-    void initialize() {
+    static std::vector<Device> process_devices_and_get_default(pcap_if_t* devs) {
+        std::vector<Device> result;
+
+        pcap_if_t* dev {devs};
+
+        while (dev != nullptr) {
+            Device device;
+            device.name = dev->name;
+            device.description = dev->description;
+
+            result.push_back(std::move(device));
+
+            dev = dev->next;
+        }
+
+        return result;
+    }
+
+    void initialize(std::optional<Device>& default_device) {
         char err_msg[PCAP_ERRBUF_SIZE];
 
-        if (pcap_init(PCAP_CHAR_ENC_UTF_8, err_msg) == PCAP_ERROR) {
+        if (pcap_init(PCAP_CHAR_ENC_UTF_8, err_msg) < 0) {
             throw error::PcapError("Could not initialize pcap: " + std::string(err_msg));
         }
+
+        pcap_if_t* devs {nullptr};
+
+        if (pcap_findalldevs(&devs, err_msg) < 0) {
+            throw error::PcapError("Could not retrieve devices list: " + std::string(err_msg));
+        }
+
+        if (devs == nullptr) {
+            // This means no default device
+            default_device = std::nullopt;
+        }
+
+        const auto devices {process_devices_and_get_default(devs)};
+
+        pcap_freealldevs(devs);
+
+        assert(!devices.empty());
+
+        // Pick the first one
+        default_device = devices.front();
     }
 
     void uninitialize() {
@@ -96,9 +137,7 @@ namespace capture {
     }
 
     void start_session(const std::string& device) {
-        if (device.empty()) {
-            // TODO automatically pick one
-        }
+        assert(!device.empty());
 
         try {
             start_capture_session(device);
