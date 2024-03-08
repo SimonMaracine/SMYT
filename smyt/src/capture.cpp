@@ -6,6 +6,7 @@
 #include <iostream>  // TODO temporary
 
 #include <pcap/pcap.h>
+#include <arpa/inet.h>
 
 #include "error.hpp"
 #include "packet.hpp"
@@ -22,6 +23,8 @@
 
     ethernet https://en.wikipedia.org/wiki/Ethernet_frame
     tcp min size https://superuser.com/questions/243008/whats-the-minimum-size-of-a-tcp-packet
+
+    ntop https://linux.die.net/man/3/inet_ntop
 */
 
 namespace capture {
@@ -112,10 +115,62 @@ namespace capture {
         long timestamp,
         std::size_t length,
         const struct ether_header* ether,
-        const struct ip* ip,
+        const struct ip* ipv4,
         const struct tcphdr* tcp
     ) {
-        std::cout << "timestamp " << timestamp << ", lentgth " << length << '\n';
+        std::cout << std::dec << "ts " << timestamp << ", len " << length;
+
+        if (ether == nullptr) {
+            std::cout << '\n';
+            return;
+        }
+
+        std::cout << " Ether ";
+
+        std::cout << std::hex
+            << static_cast<unsigned int>(ether->ether_shost[0u])
+            << ':'
+            << static_cast<unsigned int>(ether->ether_shost[1u])
+            << ':'
+            << static_cast<unsigned int>(ether->ether_shost[2u])
+            << ':'
+            << static_cast<unsigned int>(ether->ether_shost[3u])
+            << ':'
+            << static_cast<unsigned int>(ether->ether_shost[4u])
+            << ':'
+            << static_cast<unsigned int>(ether->ether_shost[5u])
+            << " -> "
+            << static_cast<unsigned int>(ether->ether_dhost[0u])
+            << ':'
+            << static_cast<unsigned int>(ether->ether_dhost[1u])
+            << ':'
+            << static_cast<unsigned int>(ether->ether_dhost[2u])
+            << ':'
+            << static_cast<unsigned int>(ether->ether_dhost[3u])
+            << ':'
+            << static_cast<unsigned int>(ether->ether_dhost[4u])
+            << ':'
+            << static_cast<unsigned int>(ether->ether_dhost[5u]);
+
+        if (ipv4 == nullptr) {
+            std::cout << '\n';
+            return;
+        }
+
+        char src_out[16u] {};
+        char dst_out[16u] {};
+
+        inet_ntop(AF_INET, &ipv4->ip_src, src_out, INET_ADDRSTRLEN);
+        inet_ntop(AF_INET, &ipv4->ip_dst, dst_out, INET_ADDRSTRLEN);
+
+        std::cout << std::dec << " IPv4 " << src_out << " -> " << dst_out;
+
+        if (tcp == nullptr) {
+            std::cout << '\n';
+            return;
+        }
+
+        std::cout << " TCP\n";
     }
 
     std::optional<Device> initialize() {
