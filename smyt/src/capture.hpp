@@ -2,8 +2,15 @@
 
 #include <string>
 #include <optional>
+#include <cstddef>
+
+#include <net/ethernet.h>
+#include <netinet/ip.h>
+#include <netinet/tcp.h>
 
 namespace capture {
+    using PacketCallback = void(*)(long, std::size_t, const struct ether_header*, const struct ip*, const struct tcphdr*);
+
     struct Device {
         std::string name;
         std::string description;

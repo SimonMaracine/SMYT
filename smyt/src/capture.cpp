@@ -3,6 +3,7 @@
 #include <cassert>
 #include <vector>
 #include <utility>
+#include <iostream>  // TODO temporary
 
 #include <pcap/pcap.h>
 
@@ -28,7 +29,7 @@ namespace capture {
 
     static constexpr int SNAPLEN {64};
     static constexpr int BUFFER_SIZE {8192};
-    static constexpr int TIMEOUT {1500};
+    static constexpr int TIMEOUT {900};
 
     // 8192 / 64 = 128 packets in buffer
 
@@ -107,6 +108,16 @@ namespace capture {
         return result;
     }
 
+    static void packet_processed(
+        long timestamp,
+        std::size_t length,
+        const struct ether_header* ether,
+        const struct ip* ip,
+        const struct tcphdr* tcp
+    ) {
+        std::cout << "timestamp " << timestamp << ", lentgth " << length << '\n';
+    }
+
     std::optional<Device> initialize() {
         char err_msg[PCAP_ERRBUF_SIZE];
 
@@ -156,7 +167,7 @@ namespace capture {
     }
 
     void capture_loop() {
-        const int result {pcap_loop(g_handle, -1, packet::process_packet, nullptr)};
+        const int result {pcap_loop(g_handle, -1, packet::process_packet, reinterpret_cast<unsigned char*>(packet_processed))};  // TODO suspicious
 
         if (result >= 0) {
             assert(false);

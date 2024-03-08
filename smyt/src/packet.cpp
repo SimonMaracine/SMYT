@@ -1,9 +1,8 @@
 #include "packet.hpp"
 
-#include <iostream>
-#include <ctime>
-
 #include <pcap/pcap.h>
+
+#include "capture.hpp"
 
 /*
     timeval https://www.gnu.org/software/libc/manual/html_node/Time-Types.html
@@ -11,6 +10,9 @@
 
 namespace packet {
     void process_packet(unsigned char* user, const struct pcap_pkthdr* meta, const unsigned char* data) {
-        std::cout << "Packet: timestamp " << meta->ts.tv_sec << ", lentgth " << meta->caplen << '\n';
+        // TODO process
+
+        const auto callback {reinterpret_cast<capture::PacketCallback>(user)};
+        callback(static_cast<long>(meta->ts.tv_sec), meta->caplen, nullptr, nullptr, nullptr);
     }
 }

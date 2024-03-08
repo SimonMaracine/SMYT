@@ -73,6 +73,7 @@ namespace args {
             }
         }
 
+        // Default is capturing
         if (result.action == Action::None) {
             result.action = Action::Capture;
         }
