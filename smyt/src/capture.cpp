@@ -4,6 +4,7 @@
 #include <vector>
 #include <utility>
 #include <iostream>  // TODO temporary
+#include <iomanip>
 
 #include <pcap/pcap.h>
 #include <arpa/inet.h>
@@ -20,6 +21,8 @@
     packet timeout https://www.tcpdump.org/manpages/libpcap-1.10.4/pcap_set_timeout.3pcap.html
     buffer size https://www.tcpdump.org/manpages/libpcap-1.10.4/pcap_set_buffer_size.3pcap.html
     devices https://www.tcpdump.org/manpages/libpcap-1.10.4/pcap_findalldevs.3pcap.html
+    compile https://www.tcpdump.org/manpages/libpcap-1.10.4/pcap_compile.3pcap.html
+    filter https://www.tcpdump.org/manpages/libpcap-1.10.4/pcap_setfilter.3pcap.html
 
     ethernet https://en.wikipedia.org/wiki/Ethernet_frame
     tcp min size https://superuser.com/questions/243008/whats-the-minimum-size-of-a-tcp-packet
@@ -35,6 +38,8 @@ namespace capture {
     static constexpr int TIMEOUT {900};
 
     // 8192 / 64 = 128 packets in buffer
+
+    static const char* FILTER {"tcp"};
 
     static void start_capture_session(const std::string& device) {
         char err_msg[PCAP_ERRBUF_SIZE];
@@ -88,6 +93,23 @@ namespace capture {
                 throw error::PcapError("Error datalink");
             }
         }
+
+        {
+            struct bpf_program filter;
+
+            if (pcap_compile(handle, &filter, FILTER, 1, PCAP_NETMASK_UNKNOWN) < 0) {
+                throw error::PcapError("Could not compile filter program: " + std::string(pcap_geterr(handle)));
+            }
+
+#if 1
+            if (pcap_setfilter(handle, &filter) < 0) {
+                pcap_freecode(&filter);
+                throw error::PcapError("Could not set filter: " + std::string(pcap_geterr(handle)));
+            }
+#endif
+
+            pcap_freecode(&filter);
+        }
     }
 
     static std::vector<Device> process_devices_and_get_default(const pcap_if_t* devs) {
@@ -118,7 +140,9 @@ namespace capture {
         const struct ip* ipv4,
         const struct tcphdr* tcp
     ) {
-        std::cout << std::dec << "ts " << timestamp << ", len " << length;
+        std::cout.fill('0');
+
+        std::cout << std::dec << timestamp << ' ' << length;
 
         if (ether == nullptr) {
             std::cout << '\n';
@@ -128,29 +152,29 @@ namespace capture {
         std::cout << " Ether ";
 
         std::cout << std::hex
-            << static_cast<unsigned int>(ether->ether_shost[0u])
+            << std::setw(2) << static_cast<unsigned int>(ether->ether_shost[0u])
             << ':'
-            << static_cast<unsigned int>(ether->ether_shost[1u])
+            << std::setw(2) << static_cast<unsigned int>(ether->ether_shost[1u])
             << ':'
-            << static_cast<unsigned int>(ether->ether_shost[2u])
+            << std::setw(2) << static_cast<unsigned int>(ether->ether_shost[2u])
             << ':'
-            << static_cast<unsigned int>(ether->ether_shost[3u])
+            << std::setw(2) << static_cast<unsigned int>(ether->ether_shost[3u])
             << ':'
-            << static_cast<unsigned int>(ether->ether_shost[4u])
+            << std::setw(2) << static_cast<unsigned int>(ether->ether_shost[4u])
             << ':'
-            << static_cast<unsigned int>(ether->ether_shost[5u])
+            << std::setw(2) << static_cast<unsigned int>(ether->ether_shost[5u])
             << " -> "
-            << static_cast<unsigned int>(ether->ether_dhost[0u])
+            << std::setw(2) << static_cast<unsigned int>(ether->ether_dhost[0u])
             << ':'
-            << static_cast<unsigned int>(ether->ether_dhost[1u])
+            << std::setw(2) << static_cast<unsigned int>(ether->ether_dhost[1u])
             << ':'
-            << static_cast<unsigned int>(ether->ether_dhost[2u])
+            << std::setw(2) << static_cast<unsigned int>(ether->ether_dhost[2u])
             << ':'
-            << static_cast<unsigned int>(ether->ether_dhost[3u])
+            << std::setw(2) << static_cast<unsigned int>(ether->ether_dhost[3u])
             << ':'
-            << static_cast<unsigned int>(ether->ether_dhost[4u])
+            << std::setw(2) << static_cast<unsigned int>(ether->ether_dhost[4u])
             << ':'
-            << static_cast<unsigned int>(ether->ether_dhost[5u]);
+            << std::setw(2) << static_cast<unsigned int>(ether->ether_dhost[5u]);
 
         if (ipv4 == nullptr) {
             std::cout << '\n';
@@ -191,6 +215,7 @@ namespace capture {
             return std::nullopt;
         }
 
+        // This can throw bad_alloc, but who cares
         const auto devices {process_devices_and_get_default(devs)};
 
         pcap_freealldevs(devs);
