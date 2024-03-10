@@ -7,6 +7,8 @@ add_executable(smyt
     "src/capture.hpp"
     "src/error.hpp"
     "src/main.cpp"
+    "src/notify.cpp"
+    "src/notify.hpp"
     "src/packet.cpp"
     "src/packet.hpp"
 )
@@ -28,3 +30,12 @@ target_link_libraries(smyt PRIVATE cargs)
 
 # Linux only for now
 target_link_libraries(smyt PRIVATE "-lpcap")
+
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(LIBNOTIFY REQUIRED "libnotify")
+
+target_include_directories(smyt PRIVATE ${LIBNOTIFY_INCLUDE_DIRS})
+
+target_link_directories(smyt PRIVATE ${LIBNOTIFY_LIBRARY_DIRS})
+
+target_link_libraries(smyt PRIVATE ${LIBNOTIFY_LIBRARIES})

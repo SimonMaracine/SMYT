@@ -11,6 +11,7 @@
 
 #include "error.hpp"
 #include "packet.hpp"
+#include "notify.hpp"
 
 /*
     main https://www.tcpdump.org/manpages/libpcap-1.10.4/pcap.3pcap.html
@@ -195,6 +196,14 @@ namespace capture {
         }
 
         std::cout << " TCP\n";
+
+        if (ntohs(tcp->dest) == 80u) {
+            try {
+                notify::notify("HTTP Packet", "Identified an HTTP packet transmitted to a server.");
+            } catch (const error::LibnotifyError& e) {
+                std::cerr << e.what() << '\n';
+            }
+        }
     }
 
     std::optional<Device> initialize() {

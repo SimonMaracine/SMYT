@@ -18,4 +18,8 @@ crashed in the meantime). These events are detected by the program and they *cou
 ## How Does SMYT Do Its Job
 
 <!-- dnf install libpcap-devel.x86_64 -->
+<!-- dnf install libnotify-devel.x86_64 -->
+<!-- dnf install glib2-devel.x86_64 -->
+<!-- dnf install notification-daemon.x86_64 -->
+
 <!-- apt install libpcap-dev -->

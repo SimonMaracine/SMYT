@@ -7,6 +7,7 @@
 #include "capture.hpp"
 #include "error.hpp"
 #include "args.hpp"
+#include "notify.hpp"
 
 static const char* smyt {"smyt: "};
 
@@ -36,6 +37,19 @@ static int capture_main(const args::Arguments& arguments) {
         return 1;
     }
 
+    try {
+        notify::initialize();
+    } catch (const error::LibnotifyError& e) {
+        std::cerr << smyt << e.what() << '\n';
+        return 1;
+    }
+
+    try {
+        notify::notify("Starting Capture", std::nullopt);
+    } catch (const error::LibnotifyError& e) {
+        std::cerr << smyt << e.what() << '\n';
+    }
+
     std::optional<capture::Device> default_device;
 
     try {
@@ -57,7 +71,6 @@ static int capture_main(const args::Arguments& arguments) {
 
     try {
         capture::start_session(*device);
-
         capture::capture_loop();
     } catch (const error::PcapError& e) {
         std::cerr << smyt << e.what() << '\n';
@@ -67,6 +80,8 @@ static int capture_main(const args::Arguments& arguments) {
     capture::stop_session();
 
     capture::uninitialize();
+
+    notify::uninitialize();
 
     std::cout << std::endl;
 
