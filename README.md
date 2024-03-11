@@ -23,3 +23,4 @@ crashed in the meantime). These events are detected by the program and they *cou
 <!-- dnf install notification-daemon.x86_64 -->
 
 <!-- apt install libpcap-dev -->
+<!-- apt install libnotify-dev -->
