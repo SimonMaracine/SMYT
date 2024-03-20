@@ -6,6 +6,8 @@ add_executable(smyt
     "src/capture.cpp"
     "src/capture.hpp"
     "src/error.hpp"
+    "src/helpers.cpp"
+    "src/helpers.hpp"
     "src/main.cpp"
     "src/notify.cpp"
     "src/notify.hpp"

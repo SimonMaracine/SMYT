@@ -7,11 +7,11 @@
 #include <iomanip>
 
 #include <pcap/pcap.h>
-#include <arpa/inet.h>
 
 #include "error.hpp"
 #include "packet.hpp"
 #include "notify.hpp"
+#include "helpers.hpp"
 
 /*
     main https://www.tcpdump.org/manpages/libpcap-1.10.4/pcap.3pcap.html
@@ -143,7 +143,10 @@ namespace capture {
     ) {
         std::cout.fill('0');
 
-        std::cout << std::dec << timestamp << ' ' << length;
+        auto ts {helpers::ts(&timestamp)};
+        ts.erase(ts.size() - 1u);
+
+        std::cout << std::dec << ts << ' ' << length;
 
         if (ether == nullptr) {
             std::cout << '\n';
@@ -182,13 +185,7 @@ namespace capture {
             return;
         }
 
-        char src_out[16u] {};
-        char dst_out[16u] {};
-
-        inet_ntop(AF_INET, &ipv4->ip_src, src_out, INET_ADDRSTRLEN);
-        inet_ntop(AF_INET, &ipv4->ip_dst, dst_out, INET_ADDRSTRLEN);
-
-        std::cout << std::dec << " IPv4 " << src_out << " -> " << dst_out;
+        std::cout << std::dec << " IPv4 " << helpers::ntop(&ipv4->ip_src) << " -> " << helpers::ntop(&ipv4->ip_dst);
 
         if (tcp == nullptr) {
             std::cout << '\n';
@@ -197,7 +194,7 @@ namespace capture {
 
         std::cout << " TCP\n";
 
-        if (ntohs(tcp->dest) == 80u) {
+        if (helpers::ntoh(tcp->dest) == 80u) {
             try {
                 notify::notify("HTTP Packet", "Identified an HTTP packet transmitted to a server.");
             } catch (const error::LibnotifyError& e) {

@@ -17,10 +17,12 @@ namespace notify {
     }
 
     void notify(const std::string& summary, const std::optional<std::string>& body) {
-        NotifyNotification* notification {notify_notification_new(
-            summary.c_str(),
-            body ? body->c_str() : nullptr,
-            nullptr)
+        NotifyNotification* notification {
+            notify_notification_new(
+                summary.c_str(),
+                body ? body->c_str() : nullptr,
+                nullptr
+            )
         };
 
         GError* error {nullptr};
