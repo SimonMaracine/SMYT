@@ -7,7 +7,7 @@
 #include "capture.hpp"
 #include "error.hpp"
 #include "args.hpp"
-#include "notify.hpp"
+#include "logging.hpp"
 
 static const char* smyt {"smyt: "};
 
@@ -38,15 +38,15 @@ static int capture_main(const args::Arguments& arguments) {
     }
 
     try {
-        notify::initialize();
-    } catch (const error::LibnotifyError& e) {
+        logging::initialize();
+    } catch (const error::LogError& e) {
         std::cerr << smyt << e.what() << '\n';
         return 1;
     }
 
     try {
-        notify::notify("Starting Capture", std::nullopt);
-    } catch (const error::LibnotifyError& e) {
+        logging::log("Starting capture");
+    } catch (const error::LogError& e) {
         std::cerr << smyt << e.what() << '\n';
     }
 
@@ -78,10 +78,8 @@ static int capture_main(const args::Arguments& arguments) {
     }
 
     capture::stop_session();
-
     capture::uninitialize();
-
-    notify::uninitialize();
+    logging::uninitialize();
 
     std::cout << std::endl;
 

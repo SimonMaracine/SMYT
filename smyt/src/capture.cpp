@@ -10,7 +10,7 @@
 
 #include "error.hpp"
 #include "packet.hpp"
-#include "notify.hpp"
+#include "logging.hpp"
 #include "helpers.hpp"
 
 /*
@@ -196,8 +196,8 @@ namespace capture {
 
         if (helpers::ntoh(tcp->dest) == 80u) {
             try {
-                notify::notify("HTTP Packet", "Identified an HTTP packet transmitted to a server.");
-            } catch (const error::LibnotifyError& e) {
+                logging::log("Identified an HTTP packet transmitted to a server.");
+            } catch (const error::LogError& e) {
                 std::cerr << e.what() << '\n';
             }
         }

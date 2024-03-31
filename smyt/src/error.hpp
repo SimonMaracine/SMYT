@@ -9,8 +9,8 @@ namespace error {
             : std::runtime_error(message) {}
     };
 
-    struct LibnotifyError : public std::runtime_error {
-        explicit LibnotifyError(const std::string& message)
+    struct LogError : public std::runtime_error {
+        explicit LogError(const std::string& message)
             : std::runtime_error(message) {}
     };
 
