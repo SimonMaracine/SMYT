@@ -19,7 +19,7 @@
 
 namespace packet {
     void process_packet(unsigned char* user, const struct pcap_pkthdr* meta, const unsigned char* data) {
-        const auto callback {reinterpret_cast<capture::PacketCallback>(user)};
+        capture::SessionData* session_data {reinterpret_cast<capture::SessionData*>(user)};
 
         struct ether_header ether;
         std::memcpy(&ether, data, sizeof(ether));
@@ -44,14 +44,14 @@ namespace packet {
         struct tcphdr tcp;
         std::memcpy(&tcp, data + sizeof(ether) + sizeof(ipv4), sizeof(tcp));
 
-        callback(static_cast<long>(meta->ts.tv_sec), meta->caplen, &ether, &ipv4, &tcp);
+        session_data->callback(static_cast<long>(meta->ts.tv_sec), meta->caplen, &ether, &ipv4, &tcp, session_data);
         return;
 
     only_ipv4:
-        callback(static_cast<long>(meta->ts.tv_sec), meta->caplen, &ether, &ipv4, nullptr);
+        session_data->callback(static_cast<long>(meta->ts.tv_sec), meta->caplen, &ether, &ipv4, nullptr, session_data);
         return;
 
     only_ether:
-        callback(static_cast<long>(meta->ts.tv_sec), meta->caplen, &ether, nullptr, nullptr);
+        session_data->callback(static_cast<long>(meta->ts.tv_sec), meta->caplen, &ether, nullptr, nullptr, session_data);
     }
 }

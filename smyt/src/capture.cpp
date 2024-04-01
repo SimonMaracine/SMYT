@@ -5,6 +5,7 @@
 #include <utility>
 #include <iostream>  // TODO temporary
 #include <iomanip>
+#include <type_traits>
 
 #include <pcap/pcap.h>
 
@@ -24,6 +25,7 @@
     devices https://www.tcpdump.org/manpages/libpcap-1.10.4/pcap_findalldevs.3pcap.html
     compile https://www.tcpdump.org/manpages/libpcap-1.10.4/pcap_compile.3pcap.html
     filter https://www.tcpdump.org/manpages/libpcap-1.10.4/pcap_setfilter.3pcap.html
+    direction https://www.tcpdump.org/manpages/libpcap-1.10.4/pcap_setdirection.3pcap.html
 
     ethernet https://en.wikipedia.org/wiki/Ethernet_frame
     tcp min size https://superuser.com/questions/243008/whats-the-minimum-size-of-a-tcp-packet
@@ -111,6 +113,10 @@ namespace capture {
 
             pcap_freecode(&filter);
         }
+
+        if (pcap_setdirection(handle, PCAP_D_IN) < 0) {
+            throw error::PcapError("Could not set direction: " + std::string(pcap_geterr(handle)));
+        }
     }
 
     static std::vector<Device> process_devices_and_get_default(const pcap_if_t* devs) {
@@ -139,7 +145,8 @@ namespace capture {
         std::size_t length,
         const struct ether_header* ether,
         const struct ip* ipv4,
-        const struct tcphdr* tcp
+        const struct tcphdr* tcp,
+        SessionData* session_data
     ) {
         std::cout.fill('0');
 
@@ -194,14 +201,40 @@ namespace capture {
 
         std::cout << " TCP\n";
 
-        if (tcp->syn) {
-            std::string src {helpers::ntop(&ipv4->ip_src)};
-            std::string dst {helpers::ntop(&ipv4->ip_dst)};
+        if (tcp->syn && !tcp->ack) {
+            const std::string src {helpers::ntop(&ipv4->ip_src)};
+            const std::string dst {helpers::ntop(&ipv4->ip_dst)};
 
             try {
-                logging::log("Identified a SYN packet: " + src + " -> " + dst, true);
+                logging::log("Captured a SYN packet: " + src + " -> " + dst, true);
             } catch (const error::LogError& e) {
                 std::cerr << e.what() << '\n';
+            }
+
+            static_assert(std::is_same_v<std::uint32_t, in_addr_t>);
+
+            TcpSession tcp_session;
+            tcp_session.src_address = ipv4->ip_src.s_addr;
+            tcp_session.timestamp = timestamp;
+
+            session_data->map[tcp->seq] = tcp_session;
+        }
+
+        if (tcp->ack && !tcp->syn) {
+            const auto iter {session_data->map.find(tcp->seq - 1u)};
+
+            if (iter != session_data->map.cend()) {
+                TcpSession& tcp_session {session_data->map.at(iter->first)};
+
+                const std::string src {helpers::ntop(&tcp_session.src_address)};
+
+                try {
+                    logging::log("Handshake with " + src + " completed", true);
+                } catch (const error::LogError& e) {
+                    std::cerr << e.what() << '\n';
+                }
+
+                session_data->map.erase(iter);
             }
         }
     }
@@ -236,7 +269,7 @@ namespace capture {
     }
 
     void uninitialize() {
-
+        // TODO needed?
     }
 
     void start_session(const std::string& device) {
@@ -256,7 +289,10 @@ namespace capture {
     }
 
     void capture_loop() {
-        const int result {pcap_loop(g_handle, -1, packet::process_packet, reinterpret_cast<unsigned char*>(packet_processed))};  // TODO suspicious
+        SessionData data;
+        data.callback = packet_processed;
+
+        const int result {pcap_loop(g_handle, -1, packet::process_packet, reinterpret_cast<unsigned char*>(&data))};
 
         if (result >= 0) {
             assert(false);
