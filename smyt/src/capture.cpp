@@ -194,9 +194,12 @@ namespace capture {
 
         std::cout << " TCP\n";
 
-        if (helpers::ntoh(tcp->dest) == 80u) {
+        if (tcp->syn) {
+            std::string src {helpers::ntop(&ipv4->ip_src)};
+            std::string dst {helpers::ntop(&ipv4->ip_dst)};
+
             try {
-                logging::log("Identified an HTTP packet transmitted to a server.");
+                logging::log("Identified a SYN packet: " + src + " -> " + dst, true);
             } catch (const error::LogError& e) {
                 std::cerr << e.what() << '\n';
             }

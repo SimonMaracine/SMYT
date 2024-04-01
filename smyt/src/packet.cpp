@@ -47,11 +47,11 @@ namespace packet {
         callback(static_cast<long>(meta->ts.tv_sec), meta->caplen, &ether, &ipv4, &tcp);
         return;
 
-only_ipv4:
+    only_ipv4:
         callback(static_cast<long>(meta->ts.tv_sec), meta->caplen, &ether, &ipv4, nullptr);
         return;
 
-only_ether:
+    only_ether:
         callback(static_cast<long>(meta->ts.tv_sec), meta->caplen, &ether, nullptr, nullptr);
     }
 }

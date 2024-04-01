@@ -13,7 +13,7 @@ namespace logging {
     static std::ofstream stream;
 
     static std::string get_current_time() {
-        std::time_t current_time {std::time(nullptr)};
+        const std::time_t current_time {std::time(nullptr)};
 
         std::string result {std::asctime(std::localtime(&current_time))};
 

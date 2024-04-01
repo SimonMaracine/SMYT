@@ -77,6 +77,12 @@ static int capture_main(const args::Arguments& arguments) {
         return 1;
     }
 
+    try {
+        logging::log("Ending capture");
+    } catch (const error::LogError& e) {
+        std::cerr << smyt << e.what() << '\n';
+    }
+
     capture::stop_session();
     capture::uninitialize();
     logging::uninitialize();
