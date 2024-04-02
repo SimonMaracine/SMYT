@@ -201,7 +201,7 @@ namespace capture {
 
         std::cout << " TCP\n";
 
-        if (tcp->syn && !tcp->ack) {
+        if (helpers::ntoh(tcp->syn) && !helpers::ntoh(tcp->ack)) {
             const std::string src {helpers::ntop(&ipv4->ip_src)};
             const std::string dst {helpers::ntop(&ipv4->ip_dst)};
 
@@ -217,11 +217,11 @@ namespace capture {
             tcp_session.src_address = ipv4->ip_src.s_addr;
             tcp_session.timestamp = timestamp;
 
-            session_data->map[tcp->seq] = tcp_session;
+            session_data->map[helpers::ntoh(tcp->seq)] = tcp_session;
         }
 
-        if (tcp->ack && !tcp->syn) {
-            const auto iter {session_data->map.find(tcp->seq - 1u)};
+        if (helpers::ntoh(tcp->ack) && !helpers::ntoh(tcp->syn)) {
+            const auto iter {session_data->map.find(helpers::ntoh(tcp->seq) - 1u)};
 
             if (iter != session_data->map.cend()) {
                 TcpSession& tcp_session {session_data->map.at(iter->first)};

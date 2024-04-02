@@ -7,6 +7,10 @@ namespace helpers {
         return ntohs(x);
     }
 
+    std::uint32_t ntoh(std::uint32_t x) {
+        return ntohl(x);
+    }
+
     std::string ntop(const void* x) {
         char result[32u] {};
 

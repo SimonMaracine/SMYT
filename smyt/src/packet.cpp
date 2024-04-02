@@ -3,9 +3,9 @@
 #include <cstring>
 
 #include <pcap/pcap.h>
-#include <arpa/inet.h>
 
 #include "capture.hpp"
+#include "helpers.hpp"
 
 /*
     timeval https://www.gnu.org/software/libc/manual/html_node/Time-Types.html
@@ -25,12 +25,12 @@ namespace packet {
         std::memcpy(&ether, data, sizeof(ether));
 
         // Check Ethernet II
-        if (ntohs(ether.ether_type) < 1536u) {
+        if (helpers::ntoh(ether.ether_type) < 1536u) {
             goto only_ether;
         }
 
         // Check EtherType IPv4
-        if (ntohs(ether.ether_type) != 0x0800u) {
+        if (helpers::ntoh(ether.ether_type) != 0x0800u) {
             goto only_ether;
         }
 
