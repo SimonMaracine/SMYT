@@ -6,7 +6,10 @@ PORT = 4898
 
 def main():
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-        s.connect((HOST, PORT))
+        try:
+            s.connect((HOST, PORT))
+        except ConnectionRefusedError as err:
+            print(err)
 
 
 if __name__ == "__main__":
