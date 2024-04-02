@@ -70,7 +70,7 @@ static int capture_main(const args::Arguments& arguments) {
     std::cout << "Capturing on device " << *device << '\n';
 
     try {
-        capture::start_session(*device);
+        capture::create_session(*device);
         capture::capture_loop();
     } catch (const error::PcapError& e) {
         std::cerr << smyt << e.what() << '\n';
@@ -83,8 +83,7 @@ static int capture_main(const args::Arguments& arguments) {
         std::cerr << smyt << e.what() << '\n';
     }
 
-    capture::stop_session();
-    capture::uninitialize();
+    capture::destroy_session();
     logging::uninitialize();
 
     std::cout << std::endl;

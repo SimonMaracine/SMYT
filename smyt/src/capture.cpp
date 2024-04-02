@@ -34,207 +34,209 @@
 */
 
 namespace capture {
-    static pcap_t* g_handle {nullptr};
+    namespace internal {
+        static pcap_t* g_handle {nullptr};
 
-    static constexpr int SNAPLEN {64};
-    static constexpr int BUFFER_SIZE {8192};
-    static constexpr int TIMEOUT {900};
+        static constexpr int SNAPLEN {64};
+        static constexpr int BUFFER_SIZE {8192};
+        static constexpr int TIMEOUT {900};
 
-    // 8192 / 64 = 128 packets in buffer
+        // 8192 / 64 = 128 packets in buffer
 
-    static const char* FILTER {"tcp"};
+        static const char* FILTER {"tcp"};
 
-    static void start_capture_session(const std::string& device) {
-        char err_msg[PCAP_ERRBUF_SIZE];
+        static void create_capture_session(const std::string& device) {
+            char err_msg[PCAP_ERRBUF_SIZE];
 
-        pcap_t* handle {pcap_create(device.c_str(), err_msg)};
+            pcap_t* handle {pcap_create(device.c_str(), err_msg)};
 
-        if (handle == nullptr) {
-            throw error::PcapError("Could not create device handle `" + device + "`: " + err_msg);
-        }
-
-        g_handle = handle;
-
-        if (pcap_set_promisc(handle, 1) == PCAP_ERROR_ACTIVATED) {
-            throw error::PcapError("Could not set promisc\n");
-        }
-
-        // Enable buffering
-        if (pcap_set_immediate_mode(handle, 0) == PCAP_ERROR_ACTIVATED) {
-            throw error::PcapError("Could not set immediate mode\n");
-        }
-
-        // Set maximum snapshot length, as we only care about TCP
-        if (pcap_set_snaplen(handle, SNAPLEN) == PCAP_ERROR_ACTIVATED) {
-            throw error::PcapError("Could not set snaplen\n");
-        }
-
-        // Set the buffer size of the packets
-        if (pcap_set_buffer_size(handle, BUFFER_SIZE) == PCAP_ERROR_ACTIVATED) {
-            throw error::PcapError("Could not set buffer size\n");
-        }
-
-        // Process packets every in bursts
-        if (pcap_set_timeout(handle, TIMEOUT) == PCAP_ERROR_ACTIVATED) {
-            throw error::PcapError("Could not set timeout\n");
-        }
-
-        {
-            const int result {pcap_activate(handle)};
-
-            if (result > 0) {
-                throw error::PcapError("Warning activating device `" + device + "`: " + pcap_statustostr(result));
-            } if (result < 0) {
-                throw error::PcapError("Could not activate device `" + device + "`: " + pcap_statustostr(result));
-            }
-        }
-
-        {
-            const int result {pcap_datalink(handle)};  // FIXME
-
-            if (result != DLT_EN10MB) {
-                throw error::PcapError("Error datalink");
-            }
-        }
-
-        {
-            struct bpf_program filter;
-
-            if (pcap_compile(handle, &filter, FILTER, 1, PCAP_NETMASK_UNKNOWN) < 0) {
-                throw error::PcapError("Could not compile filter program: " + std::string(pcap_geterr(handle)));
+            if (handle == nullptr) {
+                throw error::PcapError("Could not create device handle `" + device + "`: " + err_msg);
             }
 
-#if 1
-            if (pcap_setfilter(handle, &filter) < 0) {
+            g_handle = handle;
+
+            if (pcap_set_promisc(handle, 1) == PCAP_ERROR_ACTIVATED) {
+                throw error::PcapError("Could not set promisc\n");
+            }
+
+            // Enable buffering
+            if (pcap_set_immediate_mode(handle, 0) == PCAP_ERROR_ACTIVATED) {
+                throw error::PcapError("Could not set immediate mode\n");
+            }
+
+            // Set maximum snapshot length, as we only care about TCP
+            if (pcap_set_snaplen(handle, SNAPLEN) == PCAP_ERROR_ACTIVATED) {
+                throw error::PcapError("Could not set snaplen\n");
+            }
+
+            // Set the buffer size of the packets
+            if (pcap_set_buffer_size(handle, BUFFER_SIZE) == PCAP_ERROR_ACTIVATED) {
+                throw error::PcapError("Could not set buffer size\n");
+            }
+
+            // Process packets every in bursts
+            if (pcap_set_timeout(handle, TIMEOUT) == PCAP_ERROR_ACTIVATED) {
+                throw error::PcapError("Could not set timeout\n");
+            }
+
+            {
+                const int result {pcap_activate(handle)};
+
+                if (result > 0) {
+                    throw error::PcapError("Warning activating device `" + device + "`: " + pcap_statustostr(result));
+                } if (result < 0) {
+                    throw error::PcapError("Could not activate device `" + device + "`: " + pcap_statustostr(result));
+                }
+            }
+
+            {
+                const int result {pcap_datalink(handle)};  // FIXME
+
+                if (result != DLT_EN10MB) {
+                    throw error::PcapError("Error datalink");
+                }
+            }
+
+            {
+                struct bpf_program filter;
+
+                if (pcap_compile(handle, &filter, FILTER, 1, PCAP_NETMASK_UNKNOWN) < 0) {
+                    throw error::PcapError("Could not compile filter program: " + std::string(pcap_geterr(handle)));
+                }
+
+    #if 1
+                if (pcap_setfilter(handle, &filter) < 0) {
+                    pcap_freecode(&filter);
+                    throw error::PcapError("Could not set filter: " + std::string(pcap_geterr(handle)));
+                }
+    #endif
+
                 pcap_freecode(&filter);
-                throw error::PcapError("Could not set filter: " + std::string(pcap_geterr(handle)));
-            }
-#endif
-
-            pcap_freecode(&filter);
-        }
-
-        if (pcap_setdirection(handle, PCAP_D_IN) < 0) {
-            throw error::PcapError("Could not set direction: " + std::string(pcap_geterr(handle)));
-        }
-    }
-
-    static std::vector<Device> process_devices_and_get_default(const pcap_if_t* devs) {
-        std::vector<Device> result;
-
-        const pcap_if_t* dev {devs};
-
-        while (dev != nullptr) {
-            Device device;
-            device.name = dev->name;
-
-            if (dev->description != nullptr) {
-                device.description = dev->description;
             }
 
-            result.push_back(std::move(device));
-
-            dev = dev->next;
+            if (pcap_setdirection(handle, PCAP_D_IN) < 0) {
+                throw error::PcapError("Could not set direction: " + std::string(pcap_geterr(handle)));
+            }
         }
 
-        return result;
-    }
+        static std::vector<Device> process_devices_and_get_default(const pcap_if_t* devs) {
+            std::vector<Device> result;
 
-    static void packet_processed(
-        long timestamp,
-        std::size_t length,
-        const struct ether_header* ether,
-        const struct ip* ipv4,
-        const struct tcphdr* tcp,
-        SessionData* session_data
-    ) {
-        std::cout.fill('0');
+            const pcap_if_t* dev {devs};
 
-        auto ts {helpers::ts(&timestamp)};
-        ts.erase(ts.size() - 1u);
+            while (dev != nullptr) {
+                Device device;
+                device.name = dev->name;
 
-        std::cout << std::dec << ts << ' ' << length;
+                if (dev->description != nullptr) {
+                    device.description = dev->description;
+                }
 
-        if (ether == nullptr) {
-            std::cout << '\n';
-            return;
-        }
+                result.push_back(std::move(device));
 
-        std::cout << " Ether ";
-
-        std::cout << std::hex
-            << std::setw(2) << static_cast<unsigned int>(ether->ether_shost[0u])
-            << ':'
-            << std::setw(2) << static_cast<unsigned int>(ether->ether_shost[1u])
-            << ':'
-            << std::setw(2) << static_cast<unsigned int>(ether->ether_shost[2u])
-            << ':'
-            << std::setw(2) << static_cast<unsigned int>(ether->ether_shost[3u])
-            << ':'
-            << std::setw(2) << static_cast<unsigned int>(ether->ether_shost[4u])
-            << ':'
-            << std::setw(2) << static_cast<unsigned int>(ether->ether_shost[5u])
-            << " -> "
-            << std::setw(2) << static_cast<unsigned int>(ether->ether_dhost[0u])
-            << ':'
-            << std::setw(2) << static_cast<unsigned int>(ether->ether_dhost[1u])
-            << ':'
-            << std::setw(2) << static_cast<unsigned int>(ether->ether_dhost[2u])
-            << ':'
-            << std::setw(2) << static_cast<unsigned int>(ether->ether_dhost[3u])
-            << ':'
-            << std::setw(2) << static_cast<unsigned int>(ether->ether_dhost[4u])
-            << ':'
-            << std::setw(2) << static_cast<unsigned int>(ether->ether_dhost[5u]);
-
-        if (ipv4 == nullptr) {
-            std::cout << '\n';
-            return;
-        }
-
-        std::cout << std::dec << " IPv4 " << helpers::ntop(&ipv4->ip_src) << " -> " << helpers::ntop(&ipv4->ip_dst);
-
-        if (tcp == nullptr) {
-            std::cout << '\n';
-            return;
-        }
-
-        std::cout << " TCP\n";
-
-        if (helpers::ntoh(tcp->syn) && !helpers::ntoh(tcp->ack)) {
-            const std::string src {helpers::ntop(&ipv4->ip_src)};
-            const std::string dst {helpers::ntop(&ipv4->ip_dst)};
-
-            try {
-                logging::log("Captured a SYN packet: " + src + " -> " + dst, true);
-            } catch (const error::LogError& e) {
-                std::cerr << e.what() << '\n';
+                dev = dev->next;
             }
 
-            static_assert(std::is_same_v<std::uint32_t, in_addr_t>);
-
-            TcpSession tcp_session;
-            tcp_session.src_address = ipv4->ip_src.s_addr;
-            tcp_session.timestamp = timestamp;
-
-            session_data->map[helpers::ntoh(tcp->seq)] = tcp_session;
+            return result;
         }
 
-        if (helpers::ntoh(tcp->ack) && !helpers::ntoh(tcp->syn)) {
-            const auto iter {session_data->map.find(helpers::ntoh(tcp->seq) - 1u)};
+        static void packet_processed(
+            long timestamp,
+            std::size_t length,
+            const struct ether_header* ether,
+            const struct ip* ipv4,
+            const struct tcphdr* tcp,
+            SessionData* session_data
+        ) {
+            std::cout.fill('0');
 
-            if (iter != session_data->map.cend()) {
-                TcpSession& tcp_session {session_data->map.at(iter->first)};
+            auto ts {helpers::ts(&timestamp)};
+            ts.erase(ts.size() - 1u);
 
-                const std::string src {helpers::ntop(&tcp_session.src_address)};
+            std::cout << std::dec << ts << ' ' << length;
+
+            if (ether == nullptr) {
+                std::cout << '\n';
+                return;
+            }
+
+            std::cout << " Ether ";
+
+            std::cout << std::hex
+                << std::setw(2) << static_cast<unsigned int>(ether->ether_shost[0u])
+                << ':'
+                << std::setw(2) << static_cast<unsigned int>(ether->ether_shost[1u])
+                << ':'
+                << std::setw(2) << static_cast<unsigned int>(ether->ether_shost[2u])
+                << ':'
+                << std::setw(2) << static_cast<unsigned int>(ether->ether_shost[3u])
+                << ':'
+                << std::setw(2) << static_cast<unsigned int>(ether->ether_shost[4u])
+                << ':'
+                << std::setw(2) << static_cast<unsigned int>(ether->ether_shost[5u])
+                << " -> "
+                << std::setw(2) << static_cast<unsigned int>(ether->ether_dhost[0u])
+                << ':'
+                << std::setw(2) << static_cast<unsigned int>(ether->ether_dhost[1u])
+                << ':'
+                << std::setw(2) << static_cast<unsigned int>(ether->ether_dhost[2u])
+                << ':'
+                << std::setw(2) << static_cast<unsigned int>(ether->ether_dhost[3u])
+                << ':'
+                << std::setw(2) << static_cast<unsigned int>(ether->ether_dhost[4u])
+                << ':'
+                << std::setw(2) << static_cast<unsigned int>(ether->ether_dhost[5u]);
+
+            if (ipv4 == nullptr) {
+                std::cout << '\n';
+                return;
+            }
+
+            std::cout << std::dec << " IPv4 " << helpers::ntop(&ipv4->ip_src) << " -> " << helpers::ntop(&ipv4->ip_dst);
+
+            if (tcp == nullptr) {
+                std::cout << '\n';
+                return;
+            }
+
+            std::cout << " TCP\n";
+
+            if (helpers::ntoh(tcp->syn) && !helpers::ntoh(tcp->ack)) {
+                const std::string src {helpers::ntop(&ipv4->ip_src)};
+                const std::string dst {helpers::ntop(&ipv4->ip_dst)};
 
                 try {
-                    logging::log("Handshake with " + src + " completed", true);
+                    logging::log("Captured a SYN packet: " + src + " -> " + dst, true);
                 } catch (const error::LogError& e) {
                     std::cerr << e.what() << '\n';
                 }
 
-                session_data->map.erase(iter);
+                static_assert(std::is_same_v<std::uint32_t, in_addr_t>);
+
+                TcpSession tcp_session;
+                tcp_session.src_address = ipv4->ip_src.s_addr;
+                tcp_session.timestamp = timestamp;
+
+                session_data->map[helpers::ntoh(tcp->seq)] = tcp_session;
+            }
+
+            if (helpers::ntoh(tcp->ack) && !helpers::ntoh(tcp->syn)) {
+                const auto iter {session_data->map.find(helpers::ntoh(tcp->seq) - 1u)};
+
+                if (iter != session_data->map.cend()) {
+                    TcpSession& tcp_session {session_data->map.at(iter->first)};
+
+                    const std::string src {helpers::ntop(&tcp_session.src_address)};
+
+                    try {
+                        logging::log("Handshake with " + src + " completed", true);
+                    } catch (const error::LogError& e) {
+                        std::cerr << e.what() << '\n';
+                    }
+
+                    session_data->map.erase(iter);
+                }
             }
         }
     }
@@ -258,7 +260,7 @@ namespace capture {
         }
 
         // This can throw bad_alloc, but who cares
-        const auto devices {process_devices_and_get_default(devs)};
+        const auto devices {internal::process_devices_and_get_default(devs)};
 
         pcap_freealldevs(devs);
 
@@ -268,44 +270,47 @@ namespace capture {
         return devices.front();
     }
 
-    void uninitialize() {
-        // TODO needed?
-    }
-
-    void start_session(const std::string& device) {
+    void create_session(const std::string& device) {
         assert(!device.empty());
 
         try {
-            start_capture_session(device);
+            internal::create_capture_session(device);
         } catch (const error::PcapError&) {
-            stop_session();
+            destroy_session();
             throw;
         }
     }
 
-    void stop_session() {
-        pcap_close(g_handle);
-        g_handle = nullptr;
+    void destroy_session() {
+        pcap_close(internal::g_handle);
+        internal::g_handle = nullptr;
     }
 
     void capture_loop() {
         SessionData data;
-        data.callback = packet_processed;
+        data.callback = internal::packet_processed;
 
-        const int result {pcap_loop(g_handle, -1, packet::process_packet, reinterpret_cast<unsigned char*>(&data))};
+        const int result {
+            pcap_loop(
+                internal::g_handle,
+                -1,
+                packet::process_packet,
+                reinterpret_cast<unsigned char*>(&data)
+            )
+        };
 
         if (result >= 0) {
             assert(false);
         } else if (result == PCAP_ERROR_BREAK) {
             return;
         } else {
-            throw error::PcapError("An error occurred while capturing: " + std::string(pcap_geterr(g_handle)));
+            throw error::PcapError("An error occurred while capturing: " + std::string(pcap_geterr(internal::g_handle)));
         }
     }
 
     void break_loop() {
-        if (g_handle != nullptr) {
-            pcap_breakloop(g_handle);
+        if (internal::g_handle != nullptr) {
+            pcap_breakloop(internal::g_handle);
         }
     }
 

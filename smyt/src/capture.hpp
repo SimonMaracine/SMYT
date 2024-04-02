@@ -39,10 +39,9 @@ namespace capture {
     };
 
     std::optional<Device> initialize();
-    void uninitialize();
 
-    void start_session(const std::string& device);
-    void stop_session();
+    void create_session(const std::string& device);
+    void destroy_session();
 
     void capture_loop();
     void break_loop();
