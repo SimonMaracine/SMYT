@@ -3,10 +3,15 @@ import socketserver
 PORT = 4898
 
 
+class Handler(socketserver.BaseRequestHandler):
+    def handle(self):
+        print(f"{self.client_address} connected")
+
+
 def main():
     try:
-        with socketserver.TCPServer(("", 4898), socketserver.BaseRequestHandler) as server:
-            print(f"Serving at port {PORT}")
+        with socketserver.TCPServer(("", PORT), Handler) as server:
+            print(f"Serving on port {PORT}")
             server.serve_forever()
     except KeyboardInterrupt:
         print()

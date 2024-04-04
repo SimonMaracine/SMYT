@@ -6,3 +6,4 @@
 - Tried to send TCP packets from the same computer that runs SMYT, to see if SMYT detects the SYN. Didn't
   work, because those packets probably didn't go through the network. Not even Wireshark could capture them.
 - Tried then to send those TCP packets from my laptop and SMYT did capture them.
+- Wrote a tiny TCP server in Python (that does nothing) and also a TCP client to test the handshake detection.

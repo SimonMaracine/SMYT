@@ -8,6 +8,7 @@ def main():
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         try:
             s.connect((HOST, PORT))
+            print(f"Connected to {HOST} on {PORT}")
         except ConnectionRefusedError as err:
             print(err)
 
