@@ -1,7 +1,6 @@
 #include "capture.hpp"
 
 #include <cassert>
-#include <vector>
 #include <utility>
 #include <iostream>  // TODO temporary
 #include <iomanip>
@@ -39,7 +38,7 @@ namespace capture {
 
         static constexpr int SNAPLEN {64};
         static constexpr int BUFFER_SIZE {8192};
-        static constexpr int TIMEOUT {900};
+        static constexpr int TIMEOUT {800};
 
         // 8192 / 64 = 128 packets in buffer
 
@@ -75,7 +74,7 @@ namespace capture {
                 throw error::PcapError("Could not set buffer size\n");
             }
 
-            // Process packets every in bursts
+            // Process packets periodically in bursts
             if (pcap_set_timeout(handle, TIMEOUT) == PCAP_ERROR_ACTIVATED) {
                 throw error::PcapError("Could not set timeout\n");
             }
@@ -141,6 +140,77 @@ namespace capture {
             return result;
         }
 
+        static void process_tcp_packet(
+            long timestamp,
+            const struct ip* ipv4,
+            const struct tcphdr* tcp,
+            SessionData* session_data
+        ) {
+            if (helpers::ntoh(tcp->syn) && !helpers::ntoh(tcp->ack)) {
+                static_assert(std::is_same_v<std::uint32_t, in_addr_t>);
+
+                SynPacket packet;
+                packet.src_address = ipv4->ip_src.s_addr;
+                packet.dst_address = ipv4->ip_dst.s_addr;
+                packet.timestamp = timestamp;
+
+                session_data->scan.syn_packets.push_back(packet);
+            }
+        }
+
+        static void process_data_so_far(SessionData* session_data) {
+            const auto packets_since_last_process {session_data->scan.syn_packets.size()};
+
+            if (session_data->scan.panic_mode) {
+                session_data->scan.syn_packet_count += packets_since_last_process;
+
+                if (packets_since_last_process <= 20u) {
+                    session_data->scan.panic_mode = false;
+                    const auto total {std::exchange(session_data->scan.syn_packet_count, 0u)};
+
+                    try {
+                        logging::log(
+                            "SYN scan is over. " +
+                            std::to_string(total) +
+                            " SYN packets in total."
+                        );
+                    } catch (const error::LogError& e) {
+                        std::cerr << e.what() << '\n';
+                    }
+                }
+
+                goto purge_data;
+            }
+
+            if (packets_since_last_process > 30u) {
+                session_data->scan.panic_mode = true;
+                session_data->scan.syn_packet_count += packets_since_last_process;
+
+                try {
+                    logging::log(
+                        "Alert! SYN scan detected! " +
+                        std::to_string(packets_since_last_process) +
+                        " SYN packets so far."
+                    );
+                } catch (const error::LogError& e) {
+                    std::cerr << e.what() << '\n';
+                }
+            } else if (packets_since_last_process > 20u) {
+                try {
+                    logging::log(
+                        "Warning! Too many SYN packets. " +
+                        std::to_string(packets_since_last_process) +
+                        " SYN packets so far."
+                    );
+                } catch (const error::LogError& e) {
+                    std::cerr << e.what() << '\n';
+                }
+            }
+
+        purge_data:
+            session_data->scan.syn_packets.clear();
+        }
+
         static void packet_processed(
             long timestamp,
             std::size_t length,
@@ -149,6 +219,11 @@ namespace capture {
             const struct tcphdr* tcp,
             SessionData* session_data
         ) {
+            if (timestamp - session_data->last_process > 10l) {  // Every 10 seconds (at least)
+                process_data_so_far(session_data);
+                session_data->last_process = timestamp;
+            }
+
             std::cout.fill('0');
 
             auto ts {helpers::ts(&timestamp)};
@@ -202,42 +277,7 @@ namespace capture {
 
             std::cout << " TCP\n";
 
-            if (helpers::ntoh(tcp->syn) && !helpers::ntoh(tcp->ack)) {
-                const std::string src {helpers::ntop(&ipv4->ip_src)};
-                const std::string dst {helpers::ntop(&ipv4->ip_dst)};
-
-                try {
-                    logging::log("Captured a SYN packet: " + src + " -> " + dst, true);
-                } catch (const error::LogError& e) {
-                    std::cerr << e.what() << '\n';
-                }
-
-                static_assert(std::is_same_v<std::uint32_t, in_addr_t>);
-
-                TcpSession tcp_session;
-                tcp_session.src_address = ipv4->ip_src.s_addr;
-                tcp_session.timestamp = timestamp;
-
-                session_data->map[helpers::ntoh(tcp->seq)] = tcp_session;
-            }
-
-            if (helpers::ntoh(tcp->ack) && !helpers::ntoh(tcp->syn)) {
-                const auto iter {session_data->map.find(helpers::ntoh(tcp->seq) - 1u)};
-
-                if (iter != session_data->map.cend()) {
-                    TcpSession& tcp_session {session_data->map.at(iter->first)};
-
-                    const std::string src {helpers::ntop(&tcp_session.src_address)};
-
-                    try {
-                        logging::log("Handshake with " + src + " completed", true);
-                    } catch (const error::LogError& e) {
-                        std::cerr << e.what() << '\n';
-                    }
-
-                    session_data->map.erase(iter);
-                }
-            }
+            process_tcp_packet(timestamp, ipv4, tcp, session_data);
         }
     }
 

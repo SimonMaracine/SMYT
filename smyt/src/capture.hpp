@@ -3,8 +3,8 @@
 #include <string>
 #include <optional>
 #include <cstddef>
-#include <unordered_map>
 #include <cstdint>
+#include <vector>
 
 #include <net/ethernet.h>
 #include <netinet/ip.h>
@@ -28,13 +28,22 @@ namespace capture {
         // TODO flags
     };
 
-    struct TcpSession {
+    struct SynPacket {
         std::uint32_t src_address {};
+        std::uint32_t dst_address {};
         long timestamp {};
     };
 
+    struct SynScan {
+        bool panic_mode {false};  // Scan in progress
+        std::size_t syn_packet_count {};
+        std::vector<SynPacket> syn_packets;
+    };
+
     struct SessionData {
-        std::unordered_map<std::uint32_t, TcpSession> map;
+        SynScan scan;
+        long last_process {};
+
         PacketCallback callback {nullptr};
     };
 
