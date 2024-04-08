@@ -2,7 +2,7 @@
 
 #include <cassert>
 #include <utility>
-#include <iostream>  // TODO temporary
+#include <iostream>
 #include <iomanip>
 #include <type_traits>
 
@@ -104,12 +104,12 @@ namespace capture {
                     throw error::PcapError("Could not compile filter program: " + std::string(pcap_geterr(handle)));
                 }
 
-    #if 1
+#if 1
                 if (pcap_setfilter(handle, &filter) < 0) {
                     pcap_freecode(&filter);
                     throw error::PcapError("Could not set filter: " + std::string(pcap_geterr(handle)));
                 }
-    #endif
+#endif
 
                 pcap_freecode(&filter);
             }
@@ -164,7 +164,7 @@ namespace capture {
             if (session_data->scan.panic_mode) {
                 session_data->scan.syn_packet_count += packets_since_last_process;
 
-                if (packets_since_last_process <= 20u) {
+                if (packets_since_last_process <= session_data->config.warning_threshold) {
                     session_data->scan.panic_mode = false;
                     const auto total {std::exchange(session_data->scan.syn_packet_count, 0u)};
 
@@ -182,7 +182,7 @@ namespace capture {
                 goto purge_data;
             }
 
-            if (packets_since_last_process > 30u) {
+            if (packets_since_last_process > session_data->config.panic_threshold) {
                 session_data->scan.panic_mode = true;
                 session_data->scan.syn_packet_count += packets_since_last_process;
 
@@ -195,7 +195,7 @@ namespace capture {
                 } catch (const error::LogError& e) {
                     std::cerr << e.what() << '\n';
                 }
-            } else if (packets_since_last_process > 20u) {
+            } else if (packets_since_last_process > session_data->config.warning_threshold) {
                 try {
                     logging::log(
                         "Warning! Too many SYN packets. " +
@@ -219,7 +219,7 @@ namespace capture {
             const struct tcphdr* tcp,
             SessionData* session_data
         ) {
-            if (timestamp - session_data->last_process > 10l) {  // Every 10 seconds (at least)
+            if (timestamp - session_data->last_process > session_data->config.process_period) {
                 process_data_so_far(session_data);
                 session_data->last_process = timestamp;
             }
@@ -326,8 +326,9 @@ namespace capture {
         internal::g_handle = nullptr;
     }
 
-    void capture_loop() {
+    void capture_loop(const configuration::Config& config) {
         SessionData data;
+        data.config = config;
         data.callback = internal::packet_processed;
 
         const int result {

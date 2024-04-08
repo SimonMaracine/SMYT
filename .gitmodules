@@ -1,3 +1,6 @@
 [submodule "extern/cargs"]
 	path = extern/cargs
 	url = https://github.com/SimonMaracine/cargs
+[submodule "extern/json"]
+	path = extern/json
+	url = https://github.com/nlohmann/json

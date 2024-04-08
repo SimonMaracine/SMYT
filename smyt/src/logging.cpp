@@ -6,11 +6,11 @@
 
 #include "error.hpp"
 
-namespace logging {
-    #define LOG_FILE_DIRECTORY "/var/log/smyt"
-    #define LOG_FILE_PATH (LOG_FILE_DIRECTORY "/smyt.log")
+#define LOG_FILE_DIRECTORY "/var/log/smyt"
+#define LOG_FILE_PATH (LOG_FILE_DIRECTORY "/smyt.log")
 
-    static std::ofstream stream;
+namespace logging {
+    static std::ofstream g_stream;
 
     static std::string get_current_time() {
         const std::time_t current_time {std::time(nullptr)};
@@ -24,32 +24,32 @@ namespace logging {
         if (!std::filesystem::exists(LOG_FILE_DIRECTORY)) {
             std::error_code err;
 
-            if (!std::filesystem::create_directories(LOG_FILE_DIRECTORY), err) {
+            if (!std::filesystem::create_directories(LOG_FILE_DIRECTORY, err)) {
                 throw error::LogError("Could not create log directory: " + err.message());
             }
         }
 
-        stream.open(LOG_FILE_PATH, std::ios_base::app);
+        g_stream.open(LOG_FILE_PATH, std::ios_base::app);
 
-        if (!stream.is_open()) {
+        if (!g_stream.is_open()) {
             throw error::LogError("Could not open log file");
         }
     }
 
     void uninitialize() {
-        stream.close();
+        g_stream.close();
     }
 
     void log(const std::string& message, bool flush) {
-        stream << '[' << get_current_time() << "] " << message << '\n';
+        g_stream << '[' << get_current_time() << "] " << message << '\n';
 
-        if (stream.bad()) {
-            stream.clear();
+        if (g_stream.bad()) {
+            g_stream.clear();
             throw error::LogError("Unexpected error writing to log file");
         }
 
         if (flush) {
-            stream.flush();
+            g_stream.flush();
         }
     }
 }

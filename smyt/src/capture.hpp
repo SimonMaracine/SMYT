@@ -10,6 +10,8 @@
 #include <netinet/ip.h>
 #include <netinet/tcp.h>
 
+#include "configuration.hpp"
+
 namespace capture {
     struct SessionData;
 
@@ -43,6 +45,7 @@ namespace capture {
     struct SessionData {
         SynScan scan;
         long last_process {};
+        configuration::Config config;
 
         PacketCallback callback {nullptr};
     };
@@ -52,7 +55,7 @@ namespace capture {
     void create_session(const std::string& device);
     void destroy_session();
 
-    void capture_loop();
+    void capture_loop(const configuration::Config& config);
     void break_loop();
 
     const char* get_library_version();

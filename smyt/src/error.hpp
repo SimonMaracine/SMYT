@@ -18,4 +18,9 @@ namespace error {
         explicit ArgsError(const std::string& message)
             : std::runtime_error(message) {}
     };
+
+    struct ConfigError : public std::runtime_error {
+        explicit ConfigError(const std::string& message)
+            : std::runtime_error(message) {}
+    };
 }

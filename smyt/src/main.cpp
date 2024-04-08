@@ -8,6 +8,7 @@
 #include "error.hpp"
 #include "args.hpp"
 #include "logging.hpp"
+#include "configuration.hpp"
 
 static const char* smyt {"smyt: "};
 
@@ -35,6 +36,15 @@ static int capture_main(const args::Arguments& arguments) {
     if (std::signal(SIGINT, signal_handler) == SIG_ERR) {
         std::cerr << smyt << "Could not setup interrupt handler\n";
         return 1;
+    }
+
+    configuration::Config config;
+
+    try {
+        configuration::load(config);
+    } catch (const error::ConfigError& e) {
+        std::cerr << smyt << e.what() << '\n';
+        std::cerr << smyt << "Using default configuration\n";
     }
 
     try {
@@ -71,7 +81,7 @@ static int capture_main(const args::Arguments& arguments) {
 
     try {
         capture::create_session(*device);
-        capture::capture_loop();
+        capture::capture_loop(config);
     } catch (const error::PcapError& e) {
         std::cerr << smyt << e.what() << '\n';
         return 1;
