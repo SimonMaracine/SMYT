@@ -38,7 +38,7 @@ namespace capture {
 
         static constexpr int SNAPLEN {64};
         static constexpr int BUFFER_SIZE {8192};
-        static constexpr int TIMEOUT {800};
+        static constexpr int TIMEOUT {700};
 
         // 8192 / 64 = 128 packets in buffer
 
