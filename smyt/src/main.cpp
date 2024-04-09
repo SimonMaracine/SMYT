@@ -10,8 +10,6 @@
 #include "logging.hpp"
 #include "configuration.hpp"
 
-static const char* smyt {"smyt: "};
-
 static void signal_handler(int) {
     // Should be fine to call this
     capture::break_loop();
@@ -44,7 +42,7 @@ static int capture_main(const args::Arguments& arguments) {
         configuration::load(config);
     } catch (const error::ConfigError& e) {
         std::cerr << smyt << e.what() << '\n';
-        std::cerr << smyt << "Using default configuration\n";
+        std::cout << "Using default configuration\n";
     }
 
     try {

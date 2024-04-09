@@ -28,7 +28,7 @@ namespace configuration {
 
         stream << std::setw(4) << root;
 
-        if (stream.bad()) {
+        if (stream.fail()) {
             throw error::ConfigError("Unexpected error writing to configuration file");
         }
     }
@@ -58,7 +58,7 @@ namespace configuration {
             throw error::ConfigError("Error reading from JSON configuration file");
         }
 
-        if (stream.bad()) {
+        if (stream.fail()) {
             throw error::ConfigError("Unexpected error reading from configuration file");
         }
 

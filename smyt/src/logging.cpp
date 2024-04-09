@@ -43,7 +43,7 @@ namespace logging {
     void log(const std::string& message, bool flush) {
         g_stream << '[' << get_current_time() << "] " << message << '\n';
 
-        if (g_stream.bad()) {
+        if (g_stream.fail()) {
             g_stream.clear();
             throw error::LogError("Unexpected error writing to log file");
         }

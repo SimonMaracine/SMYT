@@ -175,7 +175,7 @@ namespace capture {
                             " SYN packets in total."
                         );
                     } catch (const error::LogError& e) {
-                        std::cerr << e.what() << '\n';
+                        std::cerr << smyt << e.what() << '\n';
                     }
                 }
 
@@ -193,7 +193,7 @@ namespace capture {
                         " SYN packets so far."
                     );
                 } catch (const error::LogError& e) {
-                    std::cerr << e.what() << '\n';
+                    std::cerr << smyt << e.what() << '\n';
                 }
             } else if (packets_since_last_process > session_data->config.warning_threshold) {
                 try {
@@ -203,7 +203,7 @@ namespace capture {
                         " SYN packets so far."
                     );
                 } catch (const error::LogError& e) {
-                    std::cerr << e.what() << '\n';
+                    std::cerr << smyt << e.what() << '\n';
                 }
             }
 
