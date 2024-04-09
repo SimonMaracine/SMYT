@@ -5,6 +5,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <vector>
+#include <ostream>
 
 #include <net/ethernet.h>
 #include <netinet/ip.h>
@@ -46,6 +47,7 @@ namespace capture {
         SynScan scan;
         long last_process {};
         configuration::Config config;
+        std::ostream* err_stream {nullptr};
 
         PacketCallback callback {nullptr};
     };
@@ -55,7 +57,7 @@ namespace capture {
     void create_session(const std::string& device);
     void destroy_session();
 
-    void capture_loop(const configuration::Config& config);
+    void capture_loop(const configuration::Config& config, std::ostream* err_stream);
     void break_loop();
 
     const char* get_library_version();

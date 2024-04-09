@@ -17,6 +17,13 @@ namespace args {
             .description = "Capture on a specific interface"
         },
         {
+            .identifier = 's',
+            .access_letters = nullptr,
+            .access_name = "service",
+            .value_name = nullptr,
+            .description = "Run the capture as a systemd service"
+        },
+        {
             .identifier = 'h',
             .access_letters = "h",
             .access_name = "help",
@@ -53,6 +60,10 @@ namespace args {
 
                     break;
                 }
+                case 's':
+                    result.service = true;
+
+                    break;
                 case 'h':
                     if (result.action == Action::None) {
                         result.action = Action::Help;

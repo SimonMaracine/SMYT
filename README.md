@@ -29,4 +29,5 @@ some action when these events occur.
 SMYT makes use of the `libpcap` library to capture IP packets as they come and go through the operating system.
 
 <!-- dnf install libpcap-devel.x86_64 -->
+<!-- dnf install systemd-devel.x86_64 -->
 <!-- apt install libpcap-dev -->

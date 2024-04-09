@@ -2,7 +2,6 @@
 
 #include <cassert>
 #include <utility>
-#include <iostream>
 #include <iomanip>
 #include <type_traits>
 
@@ -175,7 +174,9 @@ namespace capture {
                             " SYN packets in total."
                         );
                     } catch (const error::LogError& e) {
-                        std::cerr << smyt << e.what() << '\n';
+                        if (session_data->err_stream) {
+                            *session_data->err_stream << smyt << e.what() << '\n';
+                        }
                     }
                 }
 
@@ -193,7 +194,9 @@ namespace capture {
                         " SYN packets so far."
                     );
                 } catch (const error::LogError& e) {
-                    std::cerr << smyt << e.what() << '\n';
+                    if (session_data->err_stream) {
+                        *session_data->err_stream << smyt << e.what() << '\n';
+                    }
                 }
             } else if (packets_since_last_process > session_data->config.warning_threshold) {
                 try {
@@ -203,7 +206,9 @@ namespace capture {
                         " SYN packets so far."
                     );
                 } catch (const error::LogError& e) {
-                    std::cerr << smyt << e.what() << '\n';
+                    if (session_data->err_stream) {
+                        *session_data->err_stream << smyt << e.what() << '\n';
+                    }
                 }
             }
 
@@ -224,6 +229,7 @@ namespace capture {
                 session_data->last_process = timestamp;
             }
 
+#if 0
             std::cout.fill('0');
 
             auto ts {helpers::ts(&timestamp)};
@@ -276,6 +282,11 @@ namespace capture {
             }
 
             std::cout << " TCP\n";
+#endif
+
+            if (tcp == nullptr) {
+                return;
+            }
 
             process_tcp_packet(timestamp, ipv4, tcp, session_data);
         }
@@ -326,9 +337,10 @@ namespace capture {
         internal::g_handle = nullptr;
     }
 
-    void capture_loop(const configuration::Config& config) {
+    void capture_loop(const configuration::Config& config, std::ostream* err_stream) {
         SessionData data;
         data.config = config;
+        data.err_stream = err_stream;
         data.callback = internal::packet_processed;
 
         const int result {

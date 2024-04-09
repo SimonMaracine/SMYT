@@ -4,6 +4,8 @@
 #include <string>
 #include <cassert>
 
+#include <systemd/sd-daemon.h>
+
 #include "capture.hpp"
 #include "error.hpp"
 #include "args.hpp"
@@ -30,7 +32,85 @@ static std::optional<std::string> choose_device(
     return std::nullopt;
 }
 
-static int capture_main(const args::Arguments& arguments) {
+static int capture_service(const args::Arguments& arguments) {
+    if (std::signal(SIGTERM, signal_handler) == SIG_ERR) {
+        sd_notifyf(0, "STATUS=%s%s", smyt, "Could not setup terminate handler");
+        return 1;
+    }
+
+    configuration::Config config;
+
+    try {
+        configuration::load(config);
+    } catch (const error::ConfigError& e) {}
+
+    try {
+        logging::initialize();
+    } catch (const error::LogError& e) {
+        sd_notifyf(0, "STATUS=%s%s", smyt, e.what());
+        return 1;
+    }
+
+    try {
+        logging::log("Starting capture");
+    } catch (const error::LogError& e) {}
+
+    std::optional<capture::Device> default_device;
+    std::optional<std::string> device;
+
+    try {
+        default_device = capture::initialize();
+    } catch (const error::PcapError& e) {
+        sd_notifyf(0, "STATUS=%s%s", smyt, e.what());
+        goto error_logging;
+    }
+
+    device = choose_device(arguments, default_device);
+
+    if (!device) {
+        sd_notifyf(0, "STATUS=%s%s", smyt, "No device to capture on");
+        goto error_logging;
+    }
+
+    try {
+        capture::create_session(*device);
+    } catch (const error::PcapError& e) {
+        sd_notifyf(0, "STATUS=%s%s", smyt, e.what());
+        goto error_logging;
+    }
+
+    sd_notify(0, "READY=1\nSTATUS=Running");
+
+    try {
+        capture::capture_loop(config, nullptr);
+    } catch (const error::PcapError& e) {
+        sd_notifyf(0, "STATUS=%s%s", smyt, e.what());
+        goto error_capture;
+    }
+
+    try {
+        logging::log("Ending capture");
+    } catch (const error::LogError& e) {}
+
+    capture::destroy_session();
+    logging::uninitialize();
+
+    std::cout << std::endl;
+
+    return 0;
+
+error_capture:
+    capture::destroy_session();
+
+error_logging:
+    logging::uninitialize();
+
+    sd_notify(0, "STOPPING=1");
+
+    return 1;
+}
+
+static int capture_command_line(const args::Arguments& arguments) {
     if (std::signal(SIGINT, signal_handler) == SIG_ERR) {
         std::cerr << smyt << "Could not setup interrupt handler\n";
         return 1;
@@ -59,19 +139,20 @@ static int capture_main(const args::Arguments& arguments) {
     }
 
     std::optional<capture::Device> default_device;
+    std::optional<std::string> device;
 
     try {
         default_device = capture::initialize();
     } catch (const error::PcapError& e) {
         std::cerr << smyt << e.what() << '\n';
-        return 1;
+        goto error_logging;
     }
 
-    const auto device {choose_device(arguments, default_device)};
+    device = choose_device(arguments, default_device);
 
     if (!device) {
         std::cerr << smyt << "No device to capture on\n";
-        return 1;
+        goto error_logging;
     }
 
     std::cout << capture::get_library_version() << '\n';
@@ -79,10 +160,16 @@ static int capture_main(const args::Arguments& arguments) {
 
     try {
         capture::create_session(*device);
-        capture::capture_loop(config);
     } catch (const error::PcapError& e) {
         std::cerr << smyt << e.what() << '\n';
-        return 1;
+        goto error_logging;
+    }
+
+    try {
+        capture::capture_loop(config, &std::cerr);
+    } catch (const error::PcapError& e) {
+        std::cerr << smyt << e.what() << '\n';
+        goto error_capture;
     }
 
     try {
@@ -97,6 +184,14 @@ static int capture_main(const args::Arguments& arguments) {
     std::cout << std::endl;
 
     return 0;
+
+error_capture:
+    capture::destroy_session();
+
+error_logging:
+    logging::uninitialize();
+
+    return 1;
 }
 
 int main(int argc, char** argv) {
@@ -115,7 +210,11 @@ int main(int argc, char** argv) {
             assert(false);
             break;
         case args::Action::Capture:
-            return capture_main(arguments);
+            if (arguments.service) {
+                return capture_service(arguments);
+            } else {
+                return capture_command_line(arguments);
+            }
         case args::Action::Help:
             args::print_help();
             break;

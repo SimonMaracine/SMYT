@@ -24,4 +24,11 @@ target_compile_options(smyt PRIVATE "-Wall" "-Wextra" "-Wpedantic" "-Wconversion
 target_compile_features(smyt PRIVATE cxx_std_20)
 set_target_properties(smyt PROPERTIES CXX_EXTENSIONS OFF)
 
-target_link_libraries(smyt PRIVATE cargs "-lpcap" nlohmann_json)
+target_link_libraries(smyt PRIVATE cargs nlohmann_json "-lpcap" "-lsystemd")
+
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(LIBNOTIFY REQUIRED "libsystemd")
+
+target_include_directories(smyt PRIVATE ${LIBSYSTEMD_INCLUDE_DIRS})
+target_link_directories(smyt PRIVATE ${LIBSYSTEMD_LIBRARY_DIRS})
+target_link_libraries(smyt PRIVATE ${LIBSYSTEMD_LIBRARIES})
