@@ -5,6 +5,8 @@
 
 #include <systemd/sd-daemon.h>
 
+// https://www.freedesktop.org/software/systemd/man/latest/systemd.service.html
+
 namespace sdaemon {
     void notify_ready() {
         sd_notify(0, "READY=1\nSTATUS=Running");

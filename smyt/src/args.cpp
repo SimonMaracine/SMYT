@@ -21,7 +21,7 @@ namespace args {
             .access_letters = nullptr,
             .access_name = "service",
             .value_name = nullptr,
-            .description = "Run the capture as a systemd service"
+            .description = "Run as a systemd service. DO NOT USE THIS OPTION."
         },
         {
             .identifier = 'h',
