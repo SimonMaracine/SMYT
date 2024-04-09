@@ -1,0 +1,4 @@
+systemctl enable smyt.service
+systemctl disable smyt.service
+systemctl start smyt.service
+systemctl stop smyt.service

@@ -4,13 +4,12 @@
 #include <string>
 #include <cassert>
 
-#include <systemd/sd-daemon.h>
-
 #include "capture.hpp"
 #include "error.hpp"
 #include "args.hpp"
 #include "logging.hpp"
 #include "configuration.hpp"
+#include "daemon.hpp"
 
 static void signal_handler(int) {
     // Should be fine to call this
@@ -34,7 +33,7 @@ static std::optional<std::string> choose_device(
 
 static int capture_service(const args::Arguments& arguments) {
     if (std::signal(SIGTERM, signal_handler) == SIG_ERR) {
-        sd_notifyf(0, "STATUS=%s%s", smyt, "Could not setup terminate handler");
+        sdaemon::notify_on_error("%s%s", smyt, "Could not setup terminate handler");
         return 1;
     }
 
@@ -47,7 +46,7 @@ static int capture_service(const args::Arguments& arguments) {
     try {
         logging::initialize();
     } catch (const error::LogError& e) {
-        sd_notifyf(0, "STATUS=%s%s", smyt, e.what());
+        sdaemon::notify_on_error("%s%s", smyt, e.what());
         return 1;
     }
 
@@ -61,30 +60,30 @@ static int capture_service(const args::Arguments& arguments) {
     try {
         default_device = capture::initialize();
     } catch (const error::PcapError& e) {
-        sd_notifyf(0, "STATUS=%s%s", smyt, e.what());
+        sdaemon::notify_on_error("%s%s", smyt, e.what());
         goto error_logging;
     }
 
     device = choose_device(arguments, default_device);
 
     if (!device) {
-        sd_notifyf(0, "STATUS=%s%s", smyt, "No device to capture on");
+        sdaemon::notify_on_error("%s%s", smyt, "No device to capture on");
         goto error_logging;
     }
 
     try {
         capture::create_session(*device);
     } catch (const error::PcapError& e) {
-        sd_notifyf(0, "STATUS=%s%s", smyt, e.what());
+        sdaemon::notify_on_error("%s%s", smyt, e.what());
         goto error_logging;
     }
 
-    sd_notify(0, "READY=1\nSTATUS=Running");
+    sdaemon::notify_ready();
 
     try {
         capture::capture_loop(config, nullptr);
     } catch (const error::PcapError& e) {
-        sd_notifyf(0, "STATUS=%s%s", smyt, e.what());
+        sdaemon::notify_on_error("%s%s", smyt, e.what());
         goto error_capture;
     }
 
@@ -105,7 +104,7 @@ error_capture:
 error_logging:
     logging::uninitialize();
 
-    sd_notify(0, "STOPPING=1");
+    sdaemon::notify_stopping();
 
     return 1;
 }

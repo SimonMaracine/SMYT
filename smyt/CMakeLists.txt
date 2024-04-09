@@ -7,6 +7,8 @@ add_executable(smyt
     "src/capture.hpp"
     "src/configuration.cpp"
     "src/configuration.hpp"
+    "src/daemon.cpp"
+    "src/daemon.hpp"
     "src/error.hpp"
     "src/helpers.cpp"
     "src/helpers.hpp"

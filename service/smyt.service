@@ -1,0 +1,11 @@
+[Unit]
+Description=Network traffic monitoring program
+
+[Service]
+Type=notify
+ExecStart=/opt/smyt/smyt --service
+Restart=on-failure
+NotifyAccess=main
+
+[Install]
+WantedBy=multi-user.target
