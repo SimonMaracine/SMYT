@@ -310,7 +310,7 @@ namespace capture {
             return std::nullopt;
         }
 
-        // This can throw bad_alloc, but who cares
+        // This can throw bad_alloc, but who cares; in fact I use strings everywhere
         const auto devices {internal::process_devices_and_get_default(devs)};
 
         pcap_freealldevs(devs);
