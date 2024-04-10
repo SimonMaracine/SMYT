@@ -13,7 +13,7 @@ namespace sdaemon {
     }
 
     void notify_stopping() {
-        sd_notify(0, "STOPPING=1");
+        sd_notify(0, "STOPPING=1\nSTATUS=Stopped");
     }
 
     void notify_on_error(const char* format, ...) {
