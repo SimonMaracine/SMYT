@@ -66,8 +66,8 @@ namespace args {
 
                     break;
                 case '?':
-                    char message[64u];
-                    cag_option_print_error_string(&context, message, 64u);
+                    char message[64u] {};
+                    cag_option_print_error_string(&context, message, sizeof(message));
 
                     throw error::ArgsError(message);
             }

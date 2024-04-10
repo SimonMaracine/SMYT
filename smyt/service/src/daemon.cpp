@@ -20,7 +20,7 @@ namespace sdaemon {
         va_list args;
         va_start(args, format);
 
-        char buffer[256u];
+        char buffer[256u] {};
         std::vsnprintf(buffer, sizeof(buffer), format, args);
 
         va_end(args);

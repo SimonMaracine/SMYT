@@ -2,7 +2,6 @@
 
 #include <cassert>
 #include <utility>
-#include <iomanip>
 #include <type_traits>
 
 #include <pcap/pcap.h>
@@ -55,27 +54,27 @@ namespace capture {
             g_handle = handle;
 
             if (pcap_set_promisc(handle, 1) == PCAP_ERROR_ACTIVATED) {
-                throw error::PcapError("Could not set promisc\n");
+                throw error::PcapError("Could not set promisc");
             }
 
             // Enable buffering
             if (pcap_set_immediate_mode(handle, 0) == PCAP_ERROR_ACTIVATED) {
-                throw error::PcapError("Could not set immediate mode\n");
+                throw error::PcapError("Could not set immediate mode");
             }
 
             // Set maximum snapshot length, as we only care about TCP
             if (pcap_set_snaplen(handle, SNAPLEN) == PCAP_ERROR_ACTIVATED) {
-                throw error::PcapError("Could not set snaplen\n");
+                throw error::PcapError("Could not set snaplen");
             }
 
             // Set the buffer size of the packets
             if (pcap_set_buffer_size(handle, BUFFER_SIZE) == PCAP_ERROR_ACTIVATED) {
-                throw error::PcapError("Could not set buffer size\n");
+                throw error::PcapError("Could not set buffer size");
             }
 
             // Process packets periodically in bursts
             if (pcap_set_timeout(handle, TIMEOUT) == PCAP_ERROR_ACTIVATED) {
-                throw error::PcapError("Could not set timeout\n");
+                throw error::PcapError("Could not set timeout");
             }
 
             {
@@ -354,9 +353,7 @@ namespace capture {
 
         if (result >= 0) {
             assert(false);
-        } else if (result == PCAP_ERROR_BREAK) {
-            return;
-        } else {
+        } else if (result != PCAP_ERROR_BREAK) {
             throw error::PcapError("An error occurred while capturing: " + std::string(pcap_geterr(internal::g_handle)));
         }
     }

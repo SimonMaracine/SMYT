@@ -1,8 +1,6 @@
-#include <iostream>
 #include <csignal>
 #include <optional>
 #include <string>
-#include <cassert>
 
 #include "capture.hpp"
 #include "error.hpp"

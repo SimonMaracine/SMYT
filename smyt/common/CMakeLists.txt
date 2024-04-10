@@ -18,7 +18,8 @@ target_include_directories(smyt_common PUBLIC "src")
 
 target_link_libraries(smyt_common PRIVATE nlohmann_json "-lpcap")
 
-target_compile_options(smyt_common PRIVATE "-Wall" "-Wextra" "-Wpedantic" "-Wconversion")
+set_compile_options(smyt_common)
 
-target_compile_features(smyt_common PRIVATE cxx_std_20)
-set_target_properties(smyt_common PROPERTIES CXX_EXTENSIONS OFF)
+if(CMAKE_BUILD_TYPE STREQUAL "Release")
+    target_compile_definitions(smyt_common PUBLIC "NDEBUG")
+endif()

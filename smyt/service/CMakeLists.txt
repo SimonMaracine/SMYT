@@ -8,10 +8,7 @@ add_executable(smytd
 
 target_link_libraries(smytd PRIVATE smyt_common "-lsystemd")
 
-target_compile_options(smytd PRIVATE "-Wall" "-Wextra" "-Wpedantic" "-Wconversion")
-
-target_compile_features(smytd PRIVATE cxx_std_20)
-set_target_properties(smytd PROPERTIES CXX_EXTENSIONS OFF)
+set_compile_options(smytd)
 
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(LIBNOTIFY REQUIRED "libsystemd")

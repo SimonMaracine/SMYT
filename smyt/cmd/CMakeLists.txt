@@ -8,7 +8,4 @@ add_executable(smyt
 
 target_link_libraries(smyt PRIVATE smyt_common cargs)
 
-target_compile_options(smyt PRIVATE "-Wall" "-Wextra" "-Wpedantic" "-Wconversion")
-
-target_compile_features(smyt PRIVATE cxx_std_20)
-set_target_properties(smyt PROPERTIES CXX_EXTENSIONS OFF)
+set_compile_options(smyt)
