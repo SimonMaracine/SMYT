@@ -25,6 +25,7 @@ namespace configuration {
         root["process_period"] = default_config.process_period;
         root["warning_threshold"] = default_config.warning_threshold;
         root["panic_threshold"] = default_config.panic_threshold;
+        root["device"] = default_config.device;
 
         stream << std::setw(4) << root;
 
@@ -52,10 +53,10 @@ namespace configuration {
 
         try {
             stream >> root;
-        } catch (const nlohmann::json::exception&) {
+        } catch (const nlohmann::json::exception& e) {
             try { create_configuration_file(); } catch (...) {}
 
-            throw error::ConfigError("Error reading from JSON configuration file");
+            throw error::ConfigError("Error reading from JSON configuration file: " + std::string(e.what()));
         }
 
         if (stream.fail()) {
@@ -66,8 +67,11 @@ namespace configuration {
             config.process_period = root["process_period"].get<long>();
             config.warning_threshold = root["warning_threshold"].get<std::size_t>();
             config.panic_threshold = root["panic_threshold"].get<std::size_t>();
-        } catch (const nlohmann::json::exception&) {
-            throw error::ConfigError("Error reading from JSON configuration file");
+            config.device = root["device"].get<std::string>();
+        } catch (const nlohmann::json::exception& e) {
+            try { create_configuration_file(); } catch (...) {}
+
+            throw error::ConfigError("Error reading from JSON configuration file: " + std::string(e.what()));
         }
 
         return config;

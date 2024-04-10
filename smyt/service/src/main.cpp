@@ -15,7 +15,22 @@ static void signal_handler(int) {
     capture::break_loop();
 }
 
-static int capture_main() {
+static std::optional<std::string> choose_device(
+    const configuration::Config& config,
+    const std::optional<capture::Device>& default_device
+) {
+    if (!config.device.empty()) {
+        return config.device;
+    }
+
+    if (default_device) {
+        return default_device->name;
+    }
+
+    return std::nullopt;
+}
+
+int main() {
     if (std::signal(SIGTERM, signal_handler) == SIG_ERR) {
         sdaemon::notify_on_error("%s%s", smyt, "Could not setup terminate handler");
         return 1;
@@ -25,7 +40,7 @@ static int capture_main() {
 
     try {
         configuration::load(config);
-    } catch (const error::ConfigError& e) {}
+    } catch (const error::ConfigError&) {}
 
     try {
         logging::initialize();
@@ -36,7 +51,7 @@ static int capture_main() {
 
     try {
         logging::log("Starting capture");
-    } catch (const error::LogError& e) {}
+    } catch (const error::LogError&) {}
 
     std::optional<capture::Device> default_device;
     std::optional<std::string> device;
@@ -48,8 +63,7 @@ static int capture_main() {
         goto error_logging;
     }
 
-    // device = choose_device(arguments, default_device);
-    device = default_device->name;
+    device = choose_device(config, default_device);
 
     if (!device) {
         sdaemon::notify_on_error("%s%s", smyt, "No device to capture on");
@@ -74,12 +88,12 @@ static int capture_main() {
 
     try {
         logging::log("Ending capture");
-    } catch (const error::LogError& e) {}
+    } catch (const error::LogError&) {}
 
     capture::destroy_session();
     logging::uninitialize();
 
-    std::cout << std::endl;
+    sdaemon::notify_stopping();
 
     return 0;
 
@@ -92,8 +106,4 @@ error_logging:
     sdaemon::notify_stopping();
 
     return 1;
-}
-
-int main() {
-    return capture_main();
 }

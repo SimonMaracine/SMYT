@@ -1,12 +1,14 @@
 #pragma once
 
 #include <cstddef>
+#include <string>
 
 namespace configuration {
-    struct Config {  // TODO interface entry
+    struct Config {
         long process_period {10l};  // Seconds
         std::size_t warning_threshold {20u};  // SYN packets
         std::size_t panic_threshold {30u};
+        std::string device;
     };
 
     void load(Config& config);

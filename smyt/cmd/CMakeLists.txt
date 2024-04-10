@@ -6,7 +6,7 @@ add_executable(smyt
     "src/main.cpp"
 )
 
-target_link_libraries(smyt PRIVATE smyt_lib cargs)
+target_link_libraries(smyt PRIVATE smyt_common cargs)
 
 target_compile_options(smyt PRIVATE "-Wall" "-Wextra" "-Wpedantic" "-Wconversion")
 

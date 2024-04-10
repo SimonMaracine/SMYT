@@ -17,10 +17,15 @@ static void signal_handler(int) {
 
 static std::optional<std::string> choose_device(
     const args::Arguments& arguments,
+    const configuration::Config& config,
     const std::optional<capture::Device>& default_device
 ) {
     if (!arguments.device.empty()) {
         return arguments.device;
+    }
+
+    if (!config.device.empty()) {
+        return config.device;
     }
 
     if (default_device) {
@@ -68,7 +73,7 @@ static int capture_main(const args::Arguments& arguments) {
         goto error_logging;
     }
 
-    device = choose_device(arguments, default_device);
+    device = choose_device(arguments, config, default_device);
 
     if (!device) {
         std::cerr << smyt << "No device to capture on\n";

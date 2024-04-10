@@ -1,7 +1,7 @@
 #! /bin/bash
 
 SERVICE="smyt.service"
-EXECUTABLE="smyt"
+EXECUTABLE="smytd"
 
 cp $SERVICE /etc/systemd/system/$SERVICE
 mkdir --parents /opt/smyt/
