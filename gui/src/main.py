@@ -18,7 +18,11 @@ class Smyt(tk.Frame):
         self._root.title("SMYT")
         self._root.geometry("768x432")
 
-        frm_left_side = tk.Frame(self, relief="solid", borderwidth=1, padx=25, pady=15)
+        self._configure_left_side()
+        self._configure_contents()
+
+    def _configure_left_side(self):
+        frm_left_side = tk.Frame(self, relief="solid", borderwidth=1, padx=25, pady=20)
         frm_left_side.grid(row=0, column=0, sticky="NSW")
 
         frm_left_side.columnconfigure(0, weight=1)
@@ -46,24 +50,44 @@ class Smyt(tk.Frame):
         frm_buttons.rowconfigure(1, weight=1)
         frm_buttons.rowconfigure(2, weight=1)
 
-        tk.Button(frm_buttons, text="Enable", command=None).grid(row=0, column=0, padx=5, pady=5, sticky="EW")
-        tk.Button(frm_buttons, text="Disable", command=None).grid(row=1, column=0, padx=5, pady=5, sticky="EW")
-        tk.Button(frm_buttons, text="Help", command=None).grid(row=2, column=0, padx=5, pady=5, sticky="EW")
+        tk.Button(frm_buttons, text="Enable", command=None).grid(row=0, column=0, padx=5, sticky="EW")
+        tk.Button(frm_buttons, text="Disable", command=None).grid(row=1, column=0, padx=5, pady=10, sticky="EW")
+        tk.Button(frm_buttons, text="Help", command=None).grid(row=2, column=0, padx=5, sticky="EW")
 
-        frm_right_side = tk.Frame(self, background="blue", relief="sunken", borderwidth=5)
-        frm_right_side.grid(row=0, column=1)
-
+    def _configure_contents(self):
         nbk_contents = ttk.Notebook(self)
         nbk_contents.grid(row=0, column=1, sticky="NSEW")
 
-        frm_page_logs = tk.Frame(nbk_contents)
-        frm_page_configuration = tk.Frame(nbk_contents)
+        frm_page_logs = tk.Frame(nbk_contents, padx=25, pady=25)
+
+        frm_page_logs.columnconfigure(0, weight=1)
+        frm_page_logs.rowconfigure(0, weight=0)
+        frm_page_logs.rowconfigure(1, weight=1)
+
+        frm_buttons = tk.Frame(frm_page_logs)
+        frm_buttons.grid(row=0, column=0, sticky="NE")
+
+        frm_buttons.rowconfigure(0, weight=1)
+        frm_buttons.columnconfigure(0, weight=1)
+        frm_buttons.columnconfigure(1, weight=1)
+
+        tk.Button(frm_buttons, text="Clear", command=None).grid(row=0, column=0, padx=5, pady=5)
+        tk.Button(frm_buttons, text="Refresh", command=None).grid(row=0, column=1, padx=5, pady=5)
+
+        frm_logs = tk.Frame(frm_page_logs, relief="sunken", borderwidth=1, padx=10, pady=10)
+        frm_logs.grid(row=1, column=0, sticky="NSEW")
+
+        # TODO temp
+        tk.Label(frm_logs, text="Warning! Some log here. Bye.").pack()
+        tk.Label(frm_logs, text="Warning! Some log there. Bye.").pack()
+        tk.Label(frm_logs, text="Alert! Some log everywhere. Bye.").pack()
+
+        frm_page_configuration = tk.Frame(nbk_contents, padx=25, pady=25)
+
+        tk.Label(frm_page_configuration, text="configuration").pack()
 
         nbk_contents.add(frm_page_logs, text="Logs")
         nbk_contents.add(frm_page_configuration, text="Configuration")
-
-        tk.Label(frm_page_logs, text="logs").pack()
-        tk.Label(frm_page_configuration, text="configuration").pack()
 
 
 def main() -> int:
