@@ -218,8 +218,8 @@ namespace capture {
 
         static void packet_processed(
             long timestamp,
-            std::size_t length,
-            const struct ether_header* ether,
+            std::size_t,
+            const struct ether_header*,
             const struct ip* ipv4,
             const struct tcphdr* tcp,
             SessionData* session_data

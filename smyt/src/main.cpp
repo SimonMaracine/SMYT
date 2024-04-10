@@ -199,7 +199,7 @@ int main(int argc, char** argv) {
     try {
         arguments = args::process_arguments(argc, argv);
     } catch (const error::ArgsError& e) {
-        std::cerr << smyt << e.what() << '\n';
+        std::cerr << smyt << e.what() << '\n';  // This runs even for service
         args::print_help();
         return 1;
     }

@@ -1,6 +1,6 @@
 #! /bin/bash
 
-NAME="smyt.service"
+SERVICE="smyt.service"
 
-rm /etc/systemd/system/$NAME
+rm /etc/systemd/system/$SERVICE
 rm --recursive /opt/smyt/
