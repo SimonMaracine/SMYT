@@ -13,7 +13,6 @@ namespace args {
     struct Arguments {
         Action action {Action::None};
         std::string device;
-        bool service {false};
     };
 
     Arguments process_arguments(int argc, char** argv);
