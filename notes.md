@@ -9,7 +9,12 @@
 - Wrote a tiny TCP server in Python (that does nothing) and also a TCP client to test the handshake detection.
 - Deleted the code that detects TCP handshakes and replaced it with detecting SYN scans, i.e. too many SYN packets
   in a short amount of time.
-- Included nlohmann/json as a dependency for managing the configuration file.
+- Included nlohmann/json as a dependency for managing the configuration file. The configuration file resides in
+  /etc/smyt/
 - Tried to make the configuration system as solid as possible.
 - Improved the code here and there, and fixed some bugs.
 - Made SMYT also run as a systemd service. Made pretty large changes to the code.
+- Separated the service functionality from the CMD functionality. Split SMYT into two programs, each with their own
+  dependencies.
+- Made some general improvements and fixes.
+- Began working on the GUI program in Python.
