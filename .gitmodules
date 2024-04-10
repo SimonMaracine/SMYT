@@ -1,6 +1,6 @@
-[submodule "extern/cargs"]
-	path = extern/cargs
+[submodule "smyt/extern/cargs"]
+	path = smyt/extern/cargs
 	url = https://github.com/SimonMaracine/cargs
-[submodule "extern/json"]
-	path = extern/json
+[submodule "smyt/extern/json"]
+	path = smyt/extern/json
 	url = https://github.com/nlohmann/json
