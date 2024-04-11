@@ -1,8 +1,12 @@
+import subprocess
+
 import tkinter as tk
 import tkinter.ttk as ttk
 
 
 class Smyt(tk.Frame):
+    LOG_FILE_PATH = "/var/log/smyt/smyt.log"
+
     def __init__(self, root: tk.Tk):
         super().__init__(root)
 
@@ -102,16 +106,24 @@ class Smyt(tk.Frame):
     def _on_clear_button_pressed(self):
         self._close_log_file()
 
-        try:
-            with open("admin://" "/var/log/smyt/smyt.log", "w"):
-                pass
-        except FileNotFoundError as err:
-            print(f"Could not find log file: {err}")
-        except OSError as err:
-            print(f"Could not open log file for writing: {err}")
+        result = subprocess.run(["pkexec", "echo", "-n", ">", "/var/log/smyt/smyt.log"])
+
+        if result != 0:
+            print("Could not clear log file")
+            return
+
+        self._lst_logs.delete(0, "end")
+
+        # try:
+        #     with open("/var/log/smyt/smyt.log", "w"):
+        #         pass
+        # except FileNotFoundError as err:
+        #     print(f"Could not find log file: {err}")
+        # except OSError as err:
+        #     print(f"Could not open log file for writing: {err}")
 
     def _open_log_file(self) -> bool:
-        self._logs = open("/var/log/smyt/smyt.log", "r")
+        self._logs = open(self.LOG_FILE_PATH, "r")
 
     def _close_log_file(self):
         if not self._logs:
@@ -136,7 +148,7 @@ class Smyt(tk.Frame):
         lines = self._logs.readlines()
 
         for line in lines:
-            self._lst_logs.insert("end", line)
+            self._lst_logs.insert("end", line.rstrip())
 
     def _on_window_closed(self):
         self._close_log_file()
