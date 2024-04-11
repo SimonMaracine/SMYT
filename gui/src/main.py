@@ -18,7 +18,7 @@ class Smyt(tk.Frame):
         self._root = root
         self._logs = None
         self._logs_reader = task.Task(self, self._read_log_file, 10_000)
-        self._config = None
+        self._config: configuration.Config = None
 
         self._configure()
         self._open_log_file()
@@ -42,13 +42,13 @@ class Smyt(tk.Frame):
         self._configure_contents()
 
     def _configure_left_side(self):
-        frm_left_side = tk.Frame(self, padx=30, pady=20)
-        frm_left_side.grid(row=0, column=0, sticky="nsw")
+        frm_left_side = tk.Frame(self)
+        frm_left_side.grid(row=0, column=0, sticky="nsw", padx=(0, 20), pady=20)
 
         frm_left_side.columnconfigure(0, weight=1)
-        frm_left_side.rowconfigure(0, weight=1)
+        frm_left_side.rowconfigure(0, weight=2)
         frm_left_side.rowconfigure(1, weight=1)
-        frm_left_side.rowconfigure(2, weight=1)
+        frm_left_side.rowconfigure(2, weight=2)
 
         frm_smyt = tk.Frame(frm_left_side, relief="sunken", borderwidth=1)
         frm_smyt.grid(row=0, column=0, sticky="new")
@@ -85,7 +85,7 @@ class Smyt(tk.Frame):
         nbk_contents.add(frm_page_configuration, text="Configuration")
 
     def _configure_logs(self, nbk_contents):
-        frm_page_logs = tk.Frame(nbk_contents, padx=25, pady=25)
+        frm_page_logs = tk.Frame(nbk_contents, padx=20, pady=20)
 
         frm_page_logs.columnconfigure(0, weight=1)
         frm_page_logs.rowconfigure(0, weight=0)
@@ -98,10 +98,10 @@ class Smyt(tk.Frame):
         frm_buttons.columnconfigure(0, weight=1)
         frm_buttons.columnconfigure(1, weight=1)
 
-        tk.Button(frm_buttons, text="Clear", command=self._on_clear_button_pressed).grid(row=0, column=0, padx=5, pady=5)
-        tk.Button(frm_buttons, text="Refresh", command=None).grid(row=0, column=1, padx=5, pady=5)  # TODO remove
+        tk.Button(frm_buttons, text="Clear", command=self._on_clear_button_pressed).grid(row=0, column=0, padx=(0, 10), pady=(0, 10))
+        tk.Button(frm_buttons, text="Refresh", command=None).grid(row=0, column=1, pady=(0, 10))  # TODO remove
 
-        frm_logs = tk.Frame(frm_page_logs, padx=10, pady=10)
+        frm_logs = tk.Frame(frm_page_logs)
         frm_logs.grid(row=1, column=0, sticky="nsew")
 
         bar_logs = tk.Scrollbar(frm_logs, orient="vertical")
@@ -115,45 +115,52 @@ class Smyt(tk.Frame):
         return frm_page_logs
 
     def _configure_configuration(self, nbk_contents):
-        frm_page_configuration = tk.Frame(nbk_contents, padx=25, pady=25)
+        frm_page_configuration = tk.Frame(nbk_contents, padx=20, pady=20)
 
         frm_page_configuration.columnconfigure(0, weight=1)
-        frm_page_configuration.rowconfigure(0, weight=1)
+        frm_page_configuration.rowconfigure(0, weight=0)
         frm_page_configuration.rowconfigure(1, weight=1)
 
         frm_buttons = tk.Frame(frm_page_configuration)
-        frm_buttons.grid(row=0, column=0, sticky="nw")
+        frm_buttons.grid(row=0, column=0, sticky="nw", pady=(0, 20))
 
         frm_buttons.rowconfigure(0, weight=1)
         frm_buttons.columnconfigure(0, weight=1)
         frm_buttons.columnconfigure(1, weight=1)
         frm_buttons.columnconfigure(2, weight=1)
 
-        tk.Button(frm_buttons, text="Edit", command=self._on_edit_button_pressed).grid(row=0, column=0, padx=5, pady=5)
-        tk.Button(frm_buttons, text="Discard", command=self._on_discard_button_pressed).grid(row=0, column=1, padx=5, pady=5)
-        tk.Button(frm_buttons, text="Save", command=self._on_save_button_pressed).grid(row=0, column=2, padx=5, pady=5)
+        tk.Button(frm_buttons, text="Edit", command=self._on_edit_button_pressed).grid(row=0, column=0, pady=(0, 10))
+        tk.Button(frm_buttons, text="Discard", command=self._on_discard_button_pressed).grid(row=0, column=1, padx=10, pady=(0, 10))
+        tk.Button(frm_buttons, text="Save", command=self._on_save_button_pressed).grid(row=0, column=2, pady=(0, 10))
 
         frm_options = tk.Frame(frm_page_configuration)
         frm_options.grid(row=1, column=0, sticky="nsew")
+
+        frm_options.columnconfigure(0, weight=1)
+        frm_options.columnconfigure(1, weight=3)
+        frm_options.rowconfigure(0, weight=1)
+        frm_options.rowconfigure(1, weight=1)
+        frm_options.rowconfigure(2, weight=1)
+        frm_options.rowconfigure(3, weight=4)
 
         self._var_process_period = tk.StringVar(frm_options)
         self._var_warning_threshold = tk.StringVar(frm_options)
         self._var_panic_threshold = tk.StringVar(frm_options)
         self._var_device = tk.StringVar(frm_options)
 
-        tk.Label(frm_options, text="process_period").grid(row=0, column=0, sticky="w")
-        tk.Label(frm_options, text="warning_threshold").grid(row=1, column=0, sticky="w")
-        tk.Label(frm_options, text="panic_threshold").grid(row=2, column=0, sticky="w")
-        tk.Label(frm_options, text="device").grid(row=3, column=0, sticky="w")
+        tk.Label(frm_options, text="process_period").grid(row=0, column=0, sticky="new")
+        tk.Label(frm_options, text="warning_threshold").grid(row=1, column=0, sticky="new")
+        tk.Label(frm_options, text="panic_threshold").grid(row=2, column=0, sticky="new")
+        tk.Label(frm_options, text="device").grid(row=3, column=0, sticky="new")
 
         self._ent_process_period = tk.Entry(frm_options, textvariable=self._var_process_period, state="disabled")
-        self._ent_process_period.grid(row=0, column=1, sticky="e", padx=5, pady=5)
+        self._ent_process_period.grid(row=0, column=1, sticky="new", padx=10, pady=(0, 10))
         self._ent_warning_threshold = tk.Entry(frm_options, textvariable=self._var_warning_threshold, state="disabled")
-        self._ent_warning_threshold.grid(row=1, column=1, sticky="e", padx=5, pady=5)
+        self._ent_warning_threshold.grid(row=1, column=1, sticky="new", padx=10, pady=(0, 10))
         self._ent_panic_threshold = tk.Entry(frm_options, textvariable=self._var_panic_threshold, state="disabled")
-        self._ent_panic_threshold.grid(row=2, column=1, sticky="e", padx=5, pady=5)
+        self._ent_panic_threshold.grid(row=2, column=1, sticky="new", padx=10, pady=(0, 10))
         self._ent_device = tk.Entry(frm_options, textvariable=self._var_device, state="disabled")
-        self._ent_device.grid(row=3, column=1, sticky="e", padx=5, pady=5)
+        self._ent_device.grid(row=3, column=1, sticky="new", padx=10, pady=(0, 10))
 
         return frm_page_configuration
 
