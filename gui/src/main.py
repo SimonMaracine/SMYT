@@ -106,21 +106,16 @@ class Smyt(tk.Frame):
     def _on_clear_button_pressed(self):
         self._close_log_file()
 
-        result = subprocess.run(["pkexec", "echo", "-n", ">", "/var/log/smyt/smyt.log"])
+        p1 = subprocess.Popen(["echo", "-n"], stdout=subprocess.PIPE)
+        p2 = subprocess.Popen(["pkexec", "tee", self.LOG_FILE_PATH], stdin=p1.stdout)
+        p1.stdout.close()
+        p2.communicate()
 
-        if result != 0:
+        if p2.returncode != 0:
             print("Could not clear log file")
             return
 
         self._lst_logs.delete(0, "end")
-
-        # try:
-        #     with open("/var/log/smyt/smyt.log", "w"):
-        #         pass
-        # except FileNotFoundError as err:
-        #     print(f"Could not find log file: {err}")
-        # except OSError as err:
-        #     print(f"Could not open log file for writing: {err}")
 
     def _open_log_file(self) -> bool:
         self._logs = open(self.LOG_FILE_PATH, "r")
