@@ -7,7 +7,10 @@ class Smyt(tk.Frame):
         super().__init__(root)
 
         self._root = root
+        self._logs = None
+
         self._configure()
+        self._read_contents_log_file()
 
     def _configure(self):
         self.pack(fill="both", expand=True, padx=20, pady=20)
@@ -17,46 +20,47 @@ class Smyt(tk.Frame):
 
         self._root.title("SMYT")
         self._root.geometry("768x432")
+        self._root.protocol("WM_DELETE_WINDOW", self._on_window_closed)
 
         self._configure_left_side()
         self._configure_contents()
 
     def _configure_left_side(self):
         frm_left_side = tk.Frame(self, relief="solid", borderwidth=1, padx=25, pady=20)
-        frm_left_side.grid(row=0, column=0, sticky="NSW")
+        frm_left_side.grid(row=0, column=0, sticky="nsw")
 
         frm_left_side.columnconfigure(0, weight=1)
         frm_left_side.rowconfigure(0, weight=1)
         frm_left_side.rowconfigure(1, weight=1)
         frm_left_side.rowconfigure(2, weight=1)
 
-        frm_smyt = tk.Frame(frm_left_side, relief="sunken", borderwidth=4)
-        frm_smyt.grid(row=0, column=0, sticky="NEW")
+        frm_smyt = tk.Frame(frm_left_side, relief="sunken", borderwidth=2)
+        frm_smyt.grid(row=0, column=0, sticky="new")
 
         tk.Label(frm_smyt, text="SMYT", font="TkHeadingFont, 22", padx=10, pady=10).pack(expand=True)
 
         self._var_status = tk.StringVar(frm_left_side, "unknown")
 
         frm_status = tk.LabelFrame(frm_left_side, text="Status")
-        frm_status.grid(row=1, column=0, pady=10, sticky="NSEW")
+        frm_status.grid(row=1, column=0, pady=10, sticky="nsew")
 
         tk.Label(frm_status, textvariable=self._var_status).pack(expand=True)
 
         frm_buttons = tk.Frame(frm_left_side)
-        frm_buttons.grid(row=2, column=0, sticky="SEW")
+        frm_buttons.grid(row=2, column=0, sticky="sew")
 
         frm_buttons.columnconfigure(0, weight=1)
         frm_buttons.rowconfigure(0, weight=1)
         frm_buttons.rowconfigure(1, weight=1)
         frm_buttons.rowconfigure(2, weight=1)
 
-        tk.Button(frm_buttons, text="Enable", command=None).grid(row=0, column=0, padx=5, sticky="EW")
-        tk.Button(frm_buttons, text="Disable", command=None).grid(row=1, column=0, padx=5, pady=10, sticky="EW")
-        tk.Button(frm_buttons, text="Help", command=None).grid(row=2, column=0, padx=5, sticky="EW")
+        tk.Button(frm_buttons, text="Enable", command=None).grid(row=0, column=0, padx=5, sticky="ew")
+        tk.Button(frm_buttons, text="Disable", command=None).grid(row=1, column=0, padx=5, pady=10, sticky="ew")
+        tk.Button(frm_buttons, text="Help", command=self._on_help_button_pressed).grid(row=2, column=0, padx=5, sticky="ew")
 
     def _configure_contents(self):
         nbk_contents = ttk.Notebook(self)
-        nbk_contents.grid(row=0, column=1, sticky="NSEW")
+        nbk_contents.grid(row=0, column=1, sticky="nsew")
 
         frm_page_logs = tk.Frame(nbk_contents, padx=25, pady=25)
 
@@ -65,7 +69,7 @@ class Smyt(tk.Frame):
         frm_page_logs.rowconfigure(1, weight=1)
 
         frm_buttons = tk.Frame(frm_page_logs)
-        frm_buttons.grid(row=0, column=0, sticky="NE")
+        frm_buttons.grid(row=0, column=0, sticky="ne")
 
         frm_buttons.rowconfigure(0, weight=1)
         frm_buttons.columnconfigure(0, weight=1)
@@ -74,13 +78,16 @@ class Smyt(tk.Frame):
         tk.Button(frm_buttons, text="Clear", command=None).grid(row=0, column=0, padx=5, pady=5)
         tk.Button(frm_buttons, text="Refresh", command=None).grid(row=0, column=1, padx=5, pady=5)
 
-        frm_logs = tk.Frame(frm_page_logs, relief="sunken", borderwidth=1, padx=10, pady=10)
-        frm_logs.grid(row=1, column=0, sticky="NSEW")
+        frm_logs = tk.Frame(frm_page_logs, padx=10, pady=10)
+        frm_logs.grid(row=1, column=0, sticky="nsew")
 
-        # TODO temp
-        tk.Label(frm_logs, text="Warning! Some log here. Bye.").pack()
-        tk.Label(frm_logs, text="Warning! Some log there. Bye.").pack()
-        tk.Label(frm_logs, text="Alert! Some log everywhere. Bye.").pack()
+        bar_logs = tk.Scrollbar(frm_logs, orient="vertical")
+        bar_logs.pack(side="right", fill="y")
+
+        self._lst_logs = tk.Listbox(frm_logs, yscrollcommand=bar_logs.set)
+        self._lst_logs.pack(side="left", fill="both", expand=True)
+
+        bar_logs.configure(command=self._lst_logs.yview)
 
         frm_page_configuration = tk.Frame(nbk_contents, padx=25, pady=25)
 
@@ -88,6 +95,31 @@ class Smyt(tk.Frame):
 
         nbk_contents.add(frm_page_logs, text="Logs")
         nbk_contents.add(frm_page_configuration, text="Configuration")
+
+    def _on_help_button_pressed(self):
+        pass
+
+    def _open_log_file(self):
+        try:
+            self._logs = open("/var/log/smyt/smyt.log", "r")
+        except FileNotFoundError:
+            print("Logs file not found")
+
+    def _read_contents_log_file(self):
+        self._open_log_file()
+
+        lines = self._logs.readlines()
+
+        for line in lines:
+            self._lst_logs.insert("end", line)
+
+    def _on_window_closed(self):
+        if self._logs:
+            if not self._logs.closed:
+                self._logs.close()
+
+        self.destroy()
+        self._root.destroy()
 
 
 def main() -> int:
