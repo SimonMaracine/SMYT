@@ -75,7 +75,7 @@ class Smyt(tk.Frame):
         frm_buttons.columnconfigure(0, weight=1)
         frm_buttons.columnconfigure(1, weight=1)
 
-        tk.Button(frm_buttons, text="Clear", command=None).grid(row=0, column=0, padx=5, pady=5)
+        tk.Button(frm_buttons, text="Clear", command=self._on_clear_button_pressed).grid(row=0, column=0, padx=5, pady=5)
         tk.Button(frm_buttons, text="Refresh", command=None).grid(row=0, column=1, padx=5, pady=5)
 
         frm_logs = tk.Frame(frm_page_logs, padx=10, pady=10)
@@ -99,14 +99,39 @@ class Smyt(tk.Frame):
     def _on_help_button_pressed(self):
         pass
 
-    def _open_log_file(self):
+    def _on_clear_button_pressed(self):
+        self._close_log_file()
+
         try:
-            self._logs = open("/var/log/smyt/smyt.log", "r")
-        except FileNotFoundError:
-            print("Logs file not found")
+            with open("admin://" "/var/log/smyt/smyt.log", "w"):
+                pass
+        except FileNotFoundError as err:
+            print(f"Could not find log file: {err}")
+        except OSError as err:
+            print(f"Could not open log file for writing: {err}")
+
+    def _open_log_file(self) -> bool:
+        self._logs = open("/var/log/smyt/smyt.log", "r")
+
+    def _close_log_file(self):
+        if not self._logs:
+            return
+
+        if self._logs.closed:
+            return
+
+        self._logs.close()
+        self._logs = None
 
     def _read_contents_log_file(self):
-        self._open_log_file()
+        try:
+            self._open_log_file()
+        except FileNotFoundError as err:
+            print(f"Could not find log file: {err}")
+            return
+        except OSError as err:
+            print(f"Could not open log file for reading: {err}")
+            return
 
         lines = self._logs.readlines()
 
@@ -114,9 +139,7 @@ class Smyt(tk.Frame):
             self._lst_logs.insert("end", line)
 
     def _on_window_closed(self):
-        if self._logs:
-            if not self._logs.closed:
-                self._logs.close()
+        self._close_log_file()
 
         self.destroy()
         self._root.destroy()
