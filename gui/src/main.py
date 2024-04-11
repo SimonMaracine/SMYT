@@ -1,7 +1,10 @@
 import subprocess
-
 import tkinter as tk
 import tkinter.ttk as ttk
+
+import task
+
+# https://linux.die.net/man/1/pkexec
 
 
 class Smyt(tk.Frame):
@@ -12,9 +15,12 @@ class Smyt(tk.Frame):
 
         self._root = root
         self._logs = None
+        self._logs_reader = task.Task(self, self._read_log_file, 7000)
 
         self._configure()
-        self._read_contents_log_file()
+        self._open_log_file()
+        self._read_log_file()
+        self._logs_reader.start()
 
     def _configure(self):
         self.pack(fill="both", expand=True, padx=20, pady=20)
@@ -30,7 +36,7 @@ class Smyt(tk.Frame):
         self._configure_contents()
 
     def _configure_left_side(self):
-        frm_left_side = tk.Frame(self, relief="solid", borderwidth=1, padx=25, pady=20)
+        frm_left_side = tk.Frame(self, relief="sunken", borderwidth=1, padx=25, pady=20)
         frm_left_side.grid(row=0, column=0, sticky="nsw")
 
         frm_left_side.columnconfigure(0, weight=1)
@@ -104,21 +110,28 @@ class Smyt(tk.Frame):
         pass
 
     def _on_clear_button_pressed(self):
+        self._logs_reader.stop()
         self._close_log_file()
 
-        p1 = subprocess.Popen(["echo", "-n"], stdout=subprocess.PIPE)
-        p2 = subprocess.Popen(["pkexec", "tee", self.LOG_FILE_PATH], stdin=p1.stdout)
-        p1.stdout.close()
-        p2.communicate()
-
-        if p2.returncode != 0:
+        if self._truncate_log_file():
+            self._lst_logs.delete(0, "end")
+        else:
             print("Could not clear log file")
+
+        self._open_log_file()
+        self._logs_reader.start()
+
+    def _open_log_file(self):
+        assert self._logs is None
+
+        try:
+            self._logs = open(self.LOG_FILE_PATH, "r")
+        except FileNotFoundError as err:
+            print(f"Could not find log file: {err}")
             return
-
-        self._lst_logs.delete(0, "end")
-
-    def _open_log_file(self) -> bool:
-        self._logs = open(self.LOG_FILE_PATH, "r")
+        except OSError as err:
+            print(f"Could not open log file for reading: {err}")
+            return
 
     def _close_log_file(self):
         if not self._logs:
@@ -130,20 +143,25 @@ class Smyt(tk.Frame):
         self._logs.close()
         self._logs = None
 
-    def _read_contents_log_file(self):
-        try:
-            self._open_log_file()
-        except FileNotFoundError as err:
-            print(f"Could not find log file: {err}")
-            return
-        except OSError as err:
-            print(f"Could not open log file for reading: {err}")
+    def _read_log_file(self):
+        if not self._logs:
             return
 
         lines = self._logs.readlines()
 
         for line in lines:
             self._lst_logs.insert("end", line.rstrip())
+
+    def _truncate_log_file(self) -> bool:
+        p1 = subprocess.Popen(["echo", "-n"], stdout=subprocess.PIPE)
+        p2 = subprocess.Popen(["pkexec", "tee", self.LOG_FILE_PATH], stdin=p1.stdout)
+        p1.stdout.close()
+        p2.communicate()
+
+        if p2.returncode != 0:
+            return False
+
+        return True
 
     def _on_window_closed(self):
         self._close_log_file()
