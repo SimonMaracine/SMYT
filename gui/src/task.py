@@ -15,5 +15,5 @@ class Task:
         self._parent.after_cancel(self._id)
 
     def _call(self):
-        self._action()
-        self._id = self._parent.after(self._delay, self._call)
+        if self._action():
+            self._id = self._parent.after(self._delay, self._call)

@@ -16,9 +16,13 @@ class Smyt(tk.Frame):
         super().__init__(root)
 
         self._root = root
+
         self._logs = None
         self._logs_reader = task.Task(self, self._read_log_file, 10_000)
+
         self._config: configuration.Config = None
+        self._config_saver = task.Task(self, self._tick_configuration_saver, 1000)
+        self._config_timer: int = None
 
         self._configure()
         self._open_log_file()
@@ -128,10 +132,18 @@ class Smyt(tk.Frame):
         frm_buttons.columnconfigure(0, weight=1)
         frm_buttons.columnconfigure(1, weight=1)
         frm_buttons.columnconfigure(2, weight=1)
+        frm_buttons.columnconfigure(3, weight=1)
 
-        tk.Button(frm_buttons, text="Edit", command=self._on_edit_button_pressed).grid(row=0, column=0, pady=(0, 10))
-        tk.Button(frm_buttons, text="Discard", command=self._on_discard_button_pressed).grid(row=0, column=1, padx=10, pady=(0, 10))
-        tk.Button(frm_buttons, text="Save", command=self._on_save_button_pressed).grid(row=0, column=2, pady=(0, 10))
+        self._btn_edit = tk.Button(frm_buttons, text="Edit", command=self._on_edit_button_pressed, state="active")
+        self._btn_edit.grid(row=0, column=0, pady=(0, 10))
+        self._btn_discard = tk.Button(frm_buttons, text="Discard", command=self._on_discard_button_pressed, state="disabled")
+        self._btn_discard.grid(row=0, column=1, padx=10, pady=(0, 10))
+        self._btn_save = tk.Button(frm_buttons, text="Save", command=self._on_save_button_pressed, state="disabled")
+        self._btn_save.grid(row=0, column=2, pady=(0, 10))
+
+        self._var_config_timer = tk.StringVar(frm_buttons, value="")
+
+        tk.Label(frm_buttons, textvariable=self._var_config_timer).grid(row=0, column=3, padx=(20, 0), pady=(0, 10))
 
         frm_options = tk.Frame(frm_page_configuration)
         frm_options.grid(row=1, column=0, sticky="nsew")
@@ -186,16 +198,16 @@ class Smyt(tk.Frame):
         self._ent_panic_threshold["state"] = "normal"
         self._ent_device["state"] = "normal"
 
-    def _on_discard_button_pressed(self):
-        self._ent_process_period["state"] = "disabled"
-        self._ent_warning_threshold["state"] = "disabled"
-        self._ent_panic_threshold["state"] = "disabled"
-        self._ent_device["state"] = "disabled"
+        self._config_timer = 30
+        self._var_config_timer.set(self._config_timer)
+        self._config_saver.start()
 
-        self._var_process_period.set(self._config.process_period)
-        self._var_warning_threshold.set(self._config.warning_threshold)
-        self._var_panic_threshold.set(self._config.panic_threshold)
-        self._var_device.set(self._config.device)
+        self._btn_edit["state"] = "disabled"
+        self._btn_discard["state"] = "active"
+        self._btn_save["state"] = "active"
+
+    def _on_discard_button_pressed(self):
+        self._discard_configuration_changes()
 
     def _on_save_button_pressed(self):
         pass
@@ -220,7 +232,7 @@ class Smyt(tk.Frame):
         self._logs.close()
         self._logs = None
 
-    def _read_log_file(self):
+    def _read_log_file(self) -> bool:
         if not self._logs:
             return
 
@@ -228,6 +240,8 @@ class Smyt(tk.Frame):
 
         for line in lines:
             self._lst_logs.insert("end", line.rstrip())
+
+        return True
 
     def _truncate_log_file(self) -> bool:
         p1 = subprocess.Popen(["echo", "-n"], stdout=subprocess.PIPE)
@@ -249,6 +263,37 @@ class Smyt(tk.Frame):
         self._var_device.set(config.device)
 
         self._config = config
+
+    def _tick_configuration_saver(self) -> bool:
+        assert self._config_timer is not None
+
+        self._config_timer -= 1
+        self._var_config_timer.set(self._config_timer)
+
+        if self._config_timer <= 0:
+            self._discard_configuration_changes()
+            return False
+
+        return True
+
+    def _discard_configuration_changes(self):
+        self._ent_process_period["state"] = "disabled"
+        self._ent_warning_threshold["state"] = "disabled"
+        self._ent_panic_threshold["state"] = "disabled"
+        self._ent_device["state"] = "disabled"
+
+        self._var_process_period.set(self._config.process_period)
+        self._var_warning_threshold.set(self._config.warning_threshold)
+        self._var_panic_threshold.set(self._config.panic_threshold)
+        self._var_device.set(self._config.device)
+
+        self._config_saver.stop()
+        self._var_config_timer.set("")
+        self._config_timer = None
+
+        self._btn_edit["state"] = "active"
+        self._btn_discard["state"] = "disabled"
+        self._btn_save["state"] = "disabled"
 
     def _on_window_closed(self):
         self._close_log_file()
