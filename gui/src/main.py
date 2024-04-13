@@ -191,7 +191,7 @@ class Smyt(tk.Frame):
         result = self._start_service()
 
         if result != 0:
-            messagebox.showerror(f"Service Start Failure", "Failed to start the service. Error code: {result}")
+            messagebox.showerror("Service Start Failure", f"Failed to start the service. Error code: {result}")
             return
 
         self._var_status.set(self.STATUS_ACTIVE)
@@ -200,7 +200,7 @@ class Smyt(tk.Frame):
         result = self._stop_service()
 
         if result != 0:
-            messagebox.showerror(f"Service Stop Failure", "Failed to stop the service. Error code: {result}")
+            messagebox.showerror("Service Stop Failure", f"Failed to stop the service. Error code: {result}")
             return
 
         self._var_status.set(self.STATUS_INACTIVE)
