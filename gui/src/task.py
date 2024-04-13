@@ -12,7 +12,11 @@ class Task:
         self._id = self._parent.after(self._delay, self._call)
 
     def stop(self):
+        if self._id is None:
+            return
+
         self._parent.after_cancel(self._id)
+        self._id = None
 
     def _call(self):
         if self._action():

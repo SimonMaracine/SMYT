@@ -10,12 +10,20 @@ import configuration
 # https://linux.die.net/man/1/pkexec
 
 
+class LogError(Exception):
+    pass
+
+
 class Smyt(tk.Frame):
     LOG_FILE_PATH = "/var/log/smyt/smyt.log"
     STATUS_UNKNOWN = "unknown"
     STATUS_ACTIVE = "active"
     STATUS_INACTIVE = "inactive"
     STATUS_UNINSTALLED = "uninstalled"
+    BLACK = "black"
+    GREEN = "green"
+    RED = "dark red"
+    VERSION = "0.1.0"
 
     def __init__(self, root: tk.Tk):
         super().__init__(root)
@@ -32,10 +40,14 @@ class Smyt(tk.Frame):
         self._service_watcher = task.Task(self, self._get_service_status, 25_000)
 
         self._configure()
-        self._open_log_file()
 
-        self._read_log_file()
-        self._logs_reader.start()
+        try:
+            self._open_log_file()
+        except LogError as err:
+            messagebox.showerror("Log Error", err)
+        else:
+            self._read_log_file()
+            self._logs_reader.start()
 
         self._get_service_status()
         self._service_watcher.start()
@@ -48,7 +60,7 @@ class Smyt(tk.Frame):
         self.columnconfigure(1, weight=2)
         self.rowconfigure(0, weight=1)
 
-        self._root.title("SMYT")
+        self._root.title("SMYT GUI")
         self._root.geometry("768x432")
         self._root.protocol("WM_DELETE_WINDOW", self._on_window_closed)
         self._root.minsize(512, 288)
@@ -68,14 +80,15 @@ class Smyt(tk.Frame):
         frm_smyt = tk.Frame(frm_left_side, relief="sunken", borderwidth=1)
         frm_smyt.grid(row=0, column=0, sticky="new")
 
-        tk.Label(frm_smyt, text="SMYT", font="TkHeadingFont, 22", padx=15, pady=10).pack(expand=True)
+        tk.Label(frm_smyt, text="SMYT", font="TkHeadingFont, 24", fg="gray20", padx=15, pady=10).pack(expand=True)
 
         self._var_status = tk.StringVar(frm_left_side, self.STATUS_UNKNOWN)
 
         frm_status = tk.LabelFrame(frm_left_side, text="Status")
         frm_status.grid(row=1, column=0, pady=10, sticky="nsew")
 
-        tk.Label(frm_status, textvariable=self._var_status).pack(expand=True)
+        self._lbl_status = tk.Label(frm_status, textvariable=self._var_status, font="TkHeadingFont, 12", fg=self.BLACK)
+        self._lbl_status.pack(expand=True)
 
         frm_buttons = tk.Frame(frm_left_side)
         frm_buttons.grid(row=2, column=0, sticky="sew")
@@ -109,12 +122,7 @@ class Smyt(tk.Frame):
         frm_buttons = tk.Frame(frm_page_logs)
         frm_buttons.grid(row=0, column=0, sticky="ne")
 
-        frm_buttons.rowconfigure(0, weight=1)
-        frm_buttons.columnconfigure(0, weight=1)
-        frm_buttons.columnconfigure(1, weight=1)
-
-        tk.Button(frm_buttons, text="Clear", command=self._on_clear_button_pressed).grid(row=0, column=0, padx=(0, 10), pady=(0, 10))
-        tk.Button(frm_buttons, text="Refresh", command=None).grid(row=0, column=1, pady=(0, 10))  # TODO remove
+        tk.Button(frm_buttons, text="Clear", command=self._on_clear_button_pressed).pack(expand=True, pady=10)
 
         frm_logs = tk.Frame(frm_page_logs)
         frm_logs.grid(row=1, column=0, sticky="nsew")
@@ -195,6 +203,7 @@ class Smyt(tk.Frame):
             return
 
         self._var_status.set(self.STATUS_ACTIVE)
+        self._lbl_status["fg"] = self.GREEN
 
     def _on_stop_button_pressed(self):
         result = self._stop_service()
@@ -204,22 +213,30 @@ class Smyt(tk.Frame):
             return
 
         self._var_status.set(self.STATUS_INACTIVE)
+        self._lbl_status["fg"] = self.RED
 
     def _on_help_button_pressed(self):
-        pass
+        messagebox.showinfo("Help", f"SMYT GUI version {self.VERSION}")
 
     def _on_clear_button_pressed(self):
         self._logs_reader.stop()
         self._close_log_file()
 
-        if self._truncate_log_file() == 0:
-            self._lst_logs.delete(0, "end")
-        else:
-            print("Could not clear log file")
+        result = self._truncate_log_file()
 
-        self._open_log_file()
+        try:
+            self._open_log_file()
+        except LogError as err:
+            messagebox.showerror("Log Error", err)
+            return
+
         self._logs.seek(0, io.SEEK_END)  # FIXME logs printed while file was closed are missed
         self._logs_reader.start()
+
+        if result == 0:
+            self._lst_logs.delete(0, "end")
+        else:
+            messagebox.showerror("Log Error", f"Could not clear log file. Error code: {result}")
 
     def _on_edit_button_pressed(self):
         self._config_timer = 30
@@ -275,9 +292,9 @@ class Smyt(tk.Frame):
         try:
             self._logs = open(self.LOG_FILE_PATH, "r")
         except FileNotFoundError as err:
-            print(f"Could not find log file: {err}")
+            raise LogError(f"Could not find log file: {err}")
         except OSError as err:
-            print(f"Could not open log file for reading: {err}")
+            raise LogError(f"Could not open log file for reading: {err}")
 
     def _close_log_file(self):
         if not self._logs:
@@ -363,12 +380,16 @@ class Smyt(tk.Frame):
         match result:
             case 0:
                 self._var_status.set(self.STATUS_ACTIVE)
+                self._lbl_status["fg"] = self.GREEN
             case 3:
                 self._var_status.set(self.STATUS_INACTIVE)
+                self._lbl_status["fg"] = self.RED
             case 4:
                 self._var_status.set(self.STATUS_UNINSTALLED)
+                self._lbl_status["fg"] = self.RED
             case _:
                 self._var_status.set(self.STATUS_UNKNOWN)
+                self._lbl_status["fg"] = self.BLACK
 
         return True
 
