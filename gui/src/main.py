@@ -11,6 +11,10 @@ import configuration
 
 class Smyt(tk.Frame):
     LOG_FILE_PATH = "/var/log/smyt/smyt.log"
+    STATUS_UNKNOWN = "unknown"
+    STATUS_ACTIVE = "active"
+    STATUS_INACTIVE = "inactive"
+    STATUS_UNINSTALLED = "uninstalled"
 
     def __init__(self, root: tk.Tk):
         super().__init__(root)
@@ -24,10 +28,16 @@ class Smyt(tk.Frame):
         self._config_saver = task.Task(self, self._tick_configuration_saver, 1000)
         self._config_timer: int = None
 
+        self._service_watcher = task.Task(self, self._get_service_status, 25_000)
+
         self._configure()
         self._open_log_file()
+
         self._read_log_file()
         self._logs_reader.start()
+
+        self._get_service_status()
+        self._service_watcher.start()
 
         self._read_configuration_file()
 
@@ -59,7 +69,7 @@ class Smyt(tk.Frame):
 
         tk.Label(frm_smyt, text="SMYT", font="TkHeadingFont, 22", padx=15, pady=10).pack(expand=True)
 
-        self._var_status = tk.StringVar(frm_left_side, "unknown")
+        self._var_status = tk.StringVar(frm_left_side, self.STATUS_UNKNOWN)
 
         frm_status = tk.LabelFrame(frm_left_side, text="Status")
         frm_status.grid(row=1, column=0, pady=10, sticky="nsew")
@@ -183,13 +193,13 @@ class Smyt(tk.Frame):
         self._logs_reader.stop()
         self._close_log_file()
 
-        if self._truncate_log_file():
+        if self._truncate_log_file() == 0:
             self._lst_logs.delete(0, "end")
         else:
             print("Could not clear log file")
 
         self._open_log_file()
-        self._logs.seek(0, io.SEEK_END)  # FIXME logs printd while file was closed are missed
+        self._logs.seek(0, io.SEEK_END)  # FIXME logs printed while file was closed are missed
         self._logs_reader.start()
 
     def _on_edit_button_pressed(self):
@@ -232,27 +242,18 @@ class Smyt(tk.Frame):
         self._logs.close()
         self._logs = None
 
-    def _read_log_file(self) -> bool:
-        if not self._logs:
-            return
-
-        lines = self._logs.readlines()
-
-        for line in lines:
-            self._lst_logs.insert("end", line.rstrip())
-
-        return True
-
-    def _truncate_log_file(self) -> bool:
+    def _truncate_log_file(self) -> int:
         p1 = subprocess.Popen(["echo", "-n"], stdout=subprocess.PIPE)
         p2 = subprocess.Popen(["pkexec", "tee", self.LOG_FILE_PATH], stdin=p1.stdout)
         p1.stdout.close()
         p2.communicate()
 
-        if p2.returncode != 0:
-            return False
+        return p2.returncode
 
-        return True
+    def _check_service_status(self) -> int:
+        p = subprocess.run(["systemctl", "is-active", "--quiet", "smyt.service"])
+
+        return p.returncode
 
     def _read_configuration_file(self):
         config = configuration.read_configuration()
@@ -264,6 +265,17 @@ class Smyt(tk.Frame):
 
         self._config = config
 
+    def _read_log_file(self) -> bool:
+        if not self._logs:
+            return
+
+        lines = self._logs.readlines()
+
+        for line in lines:
+            self._lst_logs.insert("end", line.rstrip())
+
+        return True
+
     def _tick_configuration_saver(self) -> bool:
         assert self._config_timer is not None
 
@@ -273,6 +285,21 @@ class Smyt(tk.Frame):
         if self._config_timer <= 0:
             self._discard_configuration_changes()
             return False
+
+        return True
+
+    def _get_service_status(self) -> bool:
+        result = self._check_service_status()
+
+        match result:
+            case 0:
+                self._var_status.set(self.STATUS_ACTIVE)
+            case 3:
+                self._var_status.set(self.STATUS_INACTIVE)
+            case 4:
+                self._var_status.set(self.STATUS_UNINSTALLED)
+            case _:
+                self._var_status.set(self.STATUS_UNKNOWN)
 
         return True
 
