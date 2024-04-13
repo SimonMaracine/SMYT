@@ -2,6 +2,7 @@ import subprocess
 import io
 import tkinter as tk
 import tkinter.ttk as ttk
+from tkinter import messagebox
 
 import task
 import configuration
@@ -84,8 +85,8 @@ class Smyt(tk.Frame):
         frm_buttons.rowconfigure(1, weight=1)
         frm_buttons.rowconfigure(2, weight=1)
 
-        tk.Button(frm_buttons, text="Enable", command=None).grid(row=0, column=0, padx=5, sticky="ew")
-        tk.Button(frm_buttons, text="Disable", command=None).grid(row=1, column=0, padx=5, pady=10, sticky="ew")
+        tk.Button(frm_buttons, text="Start", command=self._on_start_button_pressed).grid(row=0, column=0, padx=5, sticky="ew")
+        tk.Button(frm_buttons, text="Stop", command=self._on_stop_button_pressed).grid(row=1, column=0, padx=5, pady=10, sticky="ew")
         tk.Button(frm_buttons, text="Help", command=self._on_help_button_pressed).grid(row=2, column=0, padx=5, sticky="ew")
 
     def _configure_contents(self):
@@ -186,6 +187,24 @@ class Smyt(tk.Frame):
 
         return frm_page_configuration
 
+    def _on_start_button_pressed(self):
+        result = self._start_service()
+
+        if result != 0:
+            messagebox.showerror(f"Service Start Failure", "Failed to start the service. Error code: {result}")
+            return
+
+        self._var_status.set(self.STATUS_ACTIVE)
+
+    def _on_stop_button_pressed(self):
+        result = self._stop_service()
+
+        if result != 0:
+            messagebox.showerror(f"Service Stop Failure", "Failed to stop the service. Error code: {result}")
+            return
+
+        self._var_status.set(self.STATUS_INACTIVE)
+
     def _on_help_button_pressed(self):
         pass
 
@@ -252,6 +271,16 @@ class Smyt(tk.Frame):
 
     def _check_service_status(self) -> int:
         p = subprocess.run(["systemctl", "is-active", "--quiet", "smyt.service"])
+
+        return p.returncode
+
+    def _start_service(self) -> int:
+        p = subprocess.run(["pkexec", "systemctl", "start", "smyt.service"])
+
+        return p.returncode
+
+    def _stop_service(self) -> int:
+        p = subprocess.run(["pkexec", "systemctl", "stop", "smyt.service"])
 
         return p.returncode
 
