@@ -28,7 +28,6 @@ namespace capture {
     struct Device {
         std::string name;
         std::string description;
-        // TODO flags
     };
 
     struct SynPacket {

@@ -88,10 +88,10 @@ namespace capture {
             }
 
             {
-                const int result {pcap_datalink(handle)};  // FIXME
+                const int result {pcap_datalink(handle)};
 
                 if (result != DLT_EN10MB) {
-                    throw error::PcapError("Error datalink");
+                    throw error::PcapError("Link-layer type is not Ethernet");
                 }
             }
 

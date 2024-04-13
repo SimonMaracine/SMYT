@@ -18,3 +18,4 @@
   dependencies.
 - Made some general improvements and fixes.
 - Began working on the GUI program in Python.
+- Made the GUI control the SMYT service through subprocesses.
