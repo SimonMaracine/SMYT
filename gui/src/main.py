@@ -222,14 +222,14 @@ class Smyt(tk.Frame):
         self._logs_reader.start()
 
     def _on_edit_button_pressed(self):
+        self._config_timer = 30
+        self._var_config_timer.set(self._config_timer)
+        self._config_saver.start()
+
         self._ent_process_period["state"] = "normal"
         self._ent_warning_threshold["state"] = "normal"
         self._ent_panic_threshold["state"] = "normal"
         self._ent_device["state"] = "normal"
-
-        self._config_timer = 30
-        self._var_config_timer.set(self._config_timer)
-        self._config_saver.start()
 
         self._btn_edit["state"] = "disabled"
         self._btn_discard["state"] = "active"
@@ -239,7 +239,35 @@ class Smyt(tk.Frame):
         self._discard_configuration_changes()
 
     def _on_save_button_pressed(self):
-        pass
+        self._config_saver.stop()
+        self._var_config_timer.set("")
+        self._config_timer = None
+
+        self._ent_process_period["state"] = "disabled"
+        self._ent_warning_threshold["state"] = "disabled"
+        self._ent_panic_threshold["state"] = "disabled"
+        self._ent_device["state"] = "disabled"
+
+        self._btn_edit["state"] = "active"
+        self._btn_discard["state"] = "disabled"
+        self._btn_save["state"] = "disabled"
+
+        config = configuration.Config(
+            self._var_process_period.get(),
+            self._var_warning_threshold.get(),
+            self._var_panic_threshold.get(),
+            self._var_device.get()
+        )
+
+        contents = configuration.dump_configuration(config)
+        result = self._write_configuration_file(contents)
+
+        if result != 0:
+            self._discard_configuration_changes()
+            messagebox.showerror("Configuration Error", "Could not write to configuration.")
+            return
+
+        self._config = config
 
     def _open_log_file(self):
         assert self._logs is None
@@ -284,8 +312,20 @@ class Smyt(tk.Frame):
 
         return p.returncode
 
+    def _write_configuration_file(self, contents: str) -> int:
+        p1 = subprocess.Popen(["echo", contents], stdout=subprocess.PIPE)
+        p2 = subprocess.Popen(["pkexec", "tee", configuration.CONFIGURATION_FILE_PATH], stdin=p1.stdout)
+        p1.stdout.close()
+        p2.communicate()
+
+        return p2.returncode
+
     def _read_configuration_file(self):
-        config = configuration.read_configuration()
+        try:
+            config = configuration.read_configuration()
+        except configuration.ConfigError as err:
+            messagebox.showerror("Configuration Error", err)
+            config = configuration.Config()
 
         self._var_process_period.set(config.process_period)
         self._var_warning_threshold.set(config.warning_threshold)
@@ -333,11 +373,6 @@ class Smyt(tk.Frame):
         return True
 
     def _discard_configuration_changes(self):
-        self._ent_process_period["state"] = "disabled"
-        self._ent_warning_threshold["state"] = "disabled"
-        self._ent_panic_threshold["state"] = "disabled"
-        self._ent_device["state"] = "disabled"
-
         self._var_process_period.set(self._config.process_period)
         self._var_warning_threshold.set(self._config.warning_threshold)
         self._var_panic_threshold.set(self._config.panic_threshold)
@@ -346,6 +381,11 @@ class Smyt(tk.Frame):
         self._config_saver.stop()
         self._var_config_timer.set("")
         self._config_timer = None
+
+        self._ent_process_period["state"] = "disabled"
+        self._ent_warning_threshold["state"] = "disabled"
+        self._ent_panic_threshold["state"] = "disabled"
+        self._ent_device["state"] = "disabled"
 
         self._btn_edit["state"] = "active"
         self._btn_discard["state"] = "disabled"
