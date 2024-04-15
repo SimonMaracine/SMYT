@@ -5,13 +5,15 @@
 #include <cstddef>
 #include <cstdint>
 #include <vector>
-#include <ostream>
+#include <iosfwd>  // std::ostream
 
 #include <net/ethernet.h>
 #include <netinet/ip.h>
 #include <netinet/tcp.h>
 
 #include "configuration.hpp"
+
+#define SMYT_LOG_ALL_PACKETS 1
 
 namespace capture {
     struct SessionData;

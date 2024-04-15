@@ -7,6 +7,7 @@ from tkinter import messagebox
 import task
 import configuration
 
+# https://tkdocs.com/tutorial/index.html
 # https://linux.die.net/man/1/pkexec
 
 

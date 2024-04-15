@@ -3,6 +3,11 @@
 #include <cassert>
 #include <utility>
 #include <type_traits>
+#include <ostream>
+#if SMYT_LOG_ALL_PACKETS
+    #include <sstream>
+    #include <iomanip>
+#endif
 
 #include <pcap/pcap.h>
 
@@ -22,6 +27,7 @@
     devices https://www.tcpdump.org/manpages/libpcap-1.10.4/pcap_findalldevs.3pcap.html
     compile https://www.tcpdump.org/manpages/libpcap-1.10.4/pcap_compile.3pcap.html
     filter https://www.tcpdump.org/manpages/libpcap-1.10.4/pcap_setfilter.3pcap.html
+    filter https://www.tcpdump.org/manpages/libpcap-1.10.4/pcap-filter.7.html
     direction https://www.tcpdump.org/manpages/libpcap-1.10.4/pcap_setdirection.3pcap.html
 
     ethernet https://en.wikipedia.org/wiki/Ethernet_frame
@@ -40,7 +46,8 @@ namespace capture {
 
         // 8192 / 64 = 128 packets in buffer
 
-        static const char* FILTER {"tcp"};
+        // TODO use more specific filters and change how packets are processed periodically
+        static const char* FILTER {"tcp"};  // "tcp[tcpflags] & tcp-syn != 0"
 
         static void create_capture_session(const std::string& device) {
             char err_msg[PCAP_ERRBUF_SIZE];
@@ -217,8 +224,8 @@ namespace capture {
 
         static void packet_processed(
             long timestamp,
-            std::size_t,
-            const struct ether_header*,
+            [[maybe_unused]] std::size_t length,
+            [[maybe_unused]] const struct ether_header* ether,
             const struct ip* ipv4,
             const struct tcphdr* tcp,
             SessionData* session_data
@@ -228,22 +235,23 @@ namespace capture {
                 session_data->last_process = timestamp;
             }
 
-#if 0
-            std::cout.fill('0');
+#if SMYT_LOG_ALL_PACKETS
+            std::ostringstream stream;
+
+            stream.fill('0');
 
             auto ts {helpers::ts(&timestamp)};
             ts.erase(ts.size() - 1u);
 
-            std::cout << std::dec << ts << ' ' << length;
+            stream << std::dec << ts << ' ' << length;
 
             if (ether == nullptr) {
-                std::cout << '\n';
                 return;
             }
 
-            std::cout << " Ether ";
+            stream << " Ether ";
 
-            std::cout << std::hex
+            stream << std::hex
                 << std::setw(2) << static_cast<unsigned int>(ether->ether_shost[0u])
                 << ':'
                 << std::setw(2) << static_cast<unsigned int>(ether->ether_shost[1u])
@@ -269,18 +277,24 @@ namespace capture {
                 << std::setw(2) << static_cast<unsigned int>(ether->ether_dhost[5u]);
 
             if (ipv4 == nullptr) {
-                std::cout << '\n';
                 return;
             }
 
-            std::cout << std::dec << " IPv4 " << helpers::ntop(&ipv4->ip_src) << " -> " << helpers::ntop(&ipv4->ip_dst);
+            stream << std::dec << " IPv4 " << helpers::ntop(&ipv4->ip_src) << " -> " << helpers::ntop(&ipv4->ip_dst);
 
             if (tcp == nullptr) {
-                std::cout << '\n';
                 return;
             }
 
-            std::cout << " TCP\n";
+            stream << " TCP";
+
+            try {
+                logging::log(stream.str());
+            } catch (const error::LogError& e) {
+                if (session_data->err_stream) {
+                    *session_data->err_stream << smyt << e.what() << '\n';
+                }
+            }
 #endif
 
             if (tcp == nullptr) {
