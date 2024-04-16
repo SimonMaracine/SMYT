@@ -44,14 +44,14 @@ namespace packet {
         struct tcphdr tcp;
         std::memcpy(&tcp, data + sizeof(ether) + sizeof(ipv4), sizeof(tcp));
 
-        session_data->callback(static_cast<long>(meta->ts.tv_sec), meta->caplen, &ether, &ipv4, &tcp, session_data);
+        session_data->callback(static_cast<long>(meta->ts.tv_sec), meta->caplen, &ether, &ipv4, &tcp, *session_data);
         return;
 
     only_ipv4:
-        session_data->callback(static_cast<long>(meta->ts.tv_sec), meta->caplen, &ether, &ipv4, nullptr, session_data);
+        session_data->callback(static_cast<long>(meta->ts.tv_sec), meta->caplen, &ether, &ipv4, nullptr, *session_data);
         return;
 
     only_ether:
-        session_data->callback(static_cast<long>(meta->ts.tv_sec), meta->caplen, &ether, nullptr, nullptr, session_data);
+        session_data->callback(static_cast<long>(meta->ts.tv_sec), meta->caplen, &ether, nullptr, nullptr, *session_data);
     }
 }

@@ -4,7 +4,9 @@
 #include <utility>
 #include <type_traits>
 #include <ostream>
-#if SMYT_LOG_ALL_PACKETS
+#include <chrono>
+#include <ctime>
+#if SMYT_LOG_PACKETS
     #include <sstream>
     #include <iomanip>
 #endif
@@ -46,8 +48,7 @@ namespace capture {
 
         // 8192 / 64 = 128 packets in buffer
 
-        // TODO use more specific filters and change how packets are processed periodically
-        static const char* FILTER {"tcp"};  // "tcp[tcpflags] & tcp-syn != 0"
+        static const char* FILTER {"tcp[tcpflags] & tcp-syn != 0"};
 
         static void create_capture_session(const std::string& device) {
             char err_msg[PCAP_ERRBUF_SIZE];
@@ -145,11 +146,11 @@ namespace capture {
             return result;
         }
 
-        static void process_tcp_packet(
+        static void process_packet(
             long timestamp,
             const struct ip* ipv4,
             const struct tcphdr* tcp,
-            SessionData* session_data
+            SessionData& session_data
         ) {
             if (helpers::ntoh(tcp->syn) && !helpers::ntoh(tcp->ack)) {
                 static_assert(std::is_same_v<std::uint32_t, in_addr_t>);
@@ -159,19 +160,26 @@ namespace capture {
                 packet.dst_address = ipv4->ip_dst.s_addr;
                 packet.timestamp = timestamp;
 
-                session_data->scan.syn_packets.push_back(packet);
+                std::lock_guard<std::mutex> lock {session_data.mutex};
+                session_data.state.syn_packets.push_back(packet);
             }
         }
 
-        static void process_data_so_far(SessionData* session_data) {
-            const auto packets_since_last_process {session_data->scan.syn_packets.size()};
+        static void process_data_so_far(State& state, const configuration::Config& config, std::ostream* err_stream) {
+#if 1
+            if (err_stream) {
+                *err_stream << "Processing...\n";
+            }
+#endif
 
-            if (session_data->scan.panic_mode) {
-                session_data->scan.syn_packet_count += packets_since_last_process;
+            const auto packets_since_last_process {state.syn_packets.size()};
 
-                if (packets_since_last_process <= session_data->config.warning_threshold) {
-                    session_data->scan.panic_mode = false;
-                    const auto total {std::exchange(session_data->scan.syn_packet_count, 0u)};
+            if (state.panic_mode) {
+                state.syn_packet_count += packets_since_last_process;
+
+                if (packets_since_last_process <= config.warning_threshold) {
+                    state.panic_mode = false;
+                    const auto total {std::exchange(state.syn_packet_count, 0u)};
 
                     try {
                         logging::log(
@@ -180,8 +188,8 @@ namespace capture {
                             " SYN packets in total."
                         );
                     } catch (const error::LogError& e) {
-                        if (session_data->err_stream) {
-                            *session_data->err_stream << smyt << e.what() << '\n';
+                        if (err_stream) {
+                            *err_stream << smyt << e.what() << '\n';
                         }
                     }
                 }
@@ -189,9 +197,9 @@ namespace capture {
                 goto purge_data;
             }
 
-            if (packets_since_last_process > session_data->config.panic_threshold) {
-                session_data->scan.panic_mode = true;
-                session_data->scan.syn_packet_count += packets_since_last_process;
+            if (packets_since_last_process > config.panic_threshold) {
+                state.panic_mode = true;
+                state.syn_packet_count += packets_since_last_process;
 
                 try {
                     logging::log(
@@ -200,11 +208,11 @@ namespace capture {
                         " SYN packets so far."
                     );
                 } catch (const error::LogError& e) {
-                    if (session_data->err_stream) {
-                        *session_data->err_stream << smyt << e.what() << '\n';
+                    if (err_stream) {
+                        *err_stream << smyt << e.what() << '\n';
                     }
                 }
-            } else if (packets_since_last_process > session_data->config.warning_threshold) {
+            } else if (packets_since_last_process > config.warning_threshold) {
                 try {
                     logging::log(
                         "Warning! Too many SYN packets. " +
@@ -212,30 +220,25 @@ namespace capture {
                         " SYN packets so far."
                     );
                 } catch (const error::LogError& e) {
-                    if (session_data->err_stream) {
-                        *session_data->err_stream << smyt << e.what() << '\n';
+                    if (err_stream) {
+                        *err_stream << smyt << e.what() << '\n';
                     }
                 }
             }
 
         purge_data:
-            session_data->scan.syn_packets.clear();
+            state.syn_packets.clear();
         }
 
-        static void packet_processed(
+        static void packet(
             long timestamp,
             [[maybe_unused]] std::size_t length,
             [[maybe_unused]] const struct ether_header* ether,
             const struct ip* ipv4,
             const struct tcphdr* tcp,
-            SessionData* session_data
+            SessionData& session_data
         ) {
-            if (timestamp - session_data->last_process > session_data->config.process_period) {
-                process_data_so_far(session_data);
-                session_data->last_process = timestamp;
-            }
-
-#if SMYT_LOG_ALL_PACKETS
+#if SMYT_LOG_PACKETS
             std::ostringstream stream;
 
             stream.fill('0');
@@ -291,8 +294,8 @@ namespace capture {
             try {
                 logging::log(stream.str());
             } catch (const error::LogError& e) {
-                if (session_data->err_stream) {
-                    *session_data->err_stream << smyt << e.what() << '\n';
+                if (session_data.err_stream) {
+                    *session_data.err_stream << smyt << e.what() << '\n';
                 }
             }
 #endif
@@ -301,7 +304,25 @@ namespace capture {
                 return;
             }
 
-            process_tcp_packet(timestamp, ipv4, tcp, session_data);
+            process_packet(timestamp, ipv4, tcp, session_data);
+        }
+
+        static void processing(SessionData& data) {
+            while (true) {
+                std::unique_lock<std::mutex> lock {data.mutex};
+                data.cv.wait_for(lock, std::chrono::seconds(data.config.process_period), [&data]() {
+                    const auto now {std::chrono::seconds(std::time(nullptr)).count()};
+
+                    return now - data.last_process >= data.config.process_period || !data.processing;
+                });
+
+                if (!data.processing) {
+                    break;
+                }
+
+                process_data_so_far(data.state, data.config, data.err_stream);
+                data.last_process = std::chrono::seconds(std::time(nullptr)).count();
+            }
         }
     }
 
@@ -354,7 +375,8 @@ namespace capture {
         SessionData data;
         data.config = config;
         data.err_stream = err_stream;
-        data.callback = internal::packet_processed;
+        data.callback = internal::packet;
+        data.thread = std::thread(internal::processing, std::ref(data));
 
         const int result {
             pcap_loop(
@@ -364,6 +386,16 @@ namespace capture {
                 reinterpret_cast<unsigned char*>(&data)
             )
         };
+
+        // Signal processing thread to stop
+        {
+            std::lock_guard<std::mutex> lock {data.mutex};
+            data.processing = false;
+        }
+        data.cv.notify_one();
+
+        // Wait for the thread
+        data.thread.join();
 
         if (result >= 0) {
             assert(false);

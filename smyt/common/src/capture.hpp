@@ -6,6 +6,9 @@
 #include <cstdint>
 #include <vector>
 #include <iosfwd>  // std::ostream
+#include <thread>
+#include <mutex>
+#include <condition_variable>
 
 #include <net/ethernet.h>
 #include <netinet/ip.h>
@@ -13,7 +16,7 @@
 
 #include "configuration.hpp"
 
-#define SMYT_LOG_ALL_PACKETS 1
+#define SMYT_LOG_PACKETS 1
 
 namespace capture {
     struct SessionData;
@@ -24,7 +27,7 @@ namespace capture {
         const struct ether_header*,
         const struct ip*,
         const struct tcphdr*,
-        SessionData*
+        SessionData&
     );
 
     struct Device {
@@ -38,19 +41,23 @@ namespace capture {
         long timestamp {};
     };
 
-    struct SynScan {
+    struct State {
         bool panic_mode {false};  // Scan in progress
         std::size_t syn_packet_count {};
         std::vector<SynPacket> syn_packets;
     };
 
     struct SessionData {
-        SynScan scan;
-        long last_process {};
         configuration::Config config;
         std::ostream* err_stream {nullptr};
-
         PacketCallback callback {nullptr};
+
+        State state;
+        long last_process {};
+        std::thread thread;
+        std::mutex mutex;
+        std::condition_variable cv;
+        bool processing {true};
     };
 
     std::optional<Device> initialize();
