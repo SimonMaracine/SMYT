@@ -1,0 +1,3 @@
+nmap -sS 192.168.1.250
+tcpdump -w attack.pcap
+tcpreplay -i wlp2s0 -t -l 10 attack.pcap
