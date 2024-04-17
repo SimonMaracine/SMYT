@@ -6,6 +6,9 @@
 #include <ostream>
 #include <chrono>
 #include <ctime>
+#include <cstdlib>
+#include <fstream>
+#include <algorithm>
 #if SMYT_LOG_PACKETS
     #include <sstream>
     #include <iomanip>
@@ -17,6 +20,8 @@
 #include "packet.hpp"
 #include "logging.hpp"
 #include "helpers.hpp"
+
+#define BLOCKED_LIST_FILE_PATH "/var/log/smyt/blocked"
 
 /*
     main https://www.tcpdump.org/manpages/libpcap-1.10.4/pcap.3pcap.html
@@ -38,6 +43,7 @@
     ntop https://linux.die.net/man/3/inet_ntop
 
     condition variable https://en.cppreference.com/w/cpp/thread/condition_variable
+    system https://en.cppreference.com/w/cpp/utility/program/system
 */
 
 namespace capture {
@@ -167,6 +173,138 @@ namespace capture {
             }
         }
 
+        static std::vector<std::uint32_t> read_blocked_attackers(std::ostream* err_stream) {
+            std::ifstream stream {BLOCKED_LIST_FILE_PATH};
+
+            if (!stream.is_open()) {
+                try {
+                    logging::log("Error reading the blocked addresses from file `" BLOCKED_LIST_FILE_PATH "`");
+                } catch (const error::LogError& e) {
+                    if (err_stream) {
+                        *err_stream << smyt << e.what() << '\n';
+                    }
+                }
+
+                return {};
+            }
+
+            std::vector<std::uint32_t> result;
+
+            std::string line;
+
+            while (std::getline(stream, line)) {
+                const auto converted {helpers::pton(line.c_str())};
+
+                if (converted) {
+                    result.push_back(*converted);
+                }
+            }
+
+            return result;
+        }
+
+        static std::vector<std::uint32_t> retrieve_blocked_attackers(std::ostream* err_stream) {
+            const std::string command {"iptables -L INPUT | awk 'NR>2 { print $4 }' > " BLOCKED_LIST_FILE_PATH};
+
+            const int result {std::system(command.c_str())};
+
+            if (WEXITSTATUS(result) != 0) {
+                try {
+                    logging::log("Error retrieving the blocked addresses from iptables");
+                } catch (const error::LogError& e) {
+                    if (err_stream) {
+                        *err_stream << smyt << e.what() << '\n';
+                    }
+                }
+
+                return {};
+            }
+
+            return read_blocked_attackers(err_stream);
+        }
+
+        static void block_attacker_by_address(std::uint32_t ip_address, State& state, std::ostream* err_stream) {
+            // iptables -C INPUT --protocol all --source ip_address --jump DROP
+            // iptables -A INPUT --protocol all --source ip_address --jump DROP
+
+            const std::string rule {"INPUT --protocol all --source " + helpers::ntop(&ip_address) + " --jump DROP"};
+
+            {
+                const std::string command {"iptables -C " + rule};
+
+                const int result {std::system(command.c_str())};
+
+                if (WEXITSTATUS(result) == 0) {
+                    try {
+                        logging::log("Firewall rule `" + rule + "` already exists");
+                    } catch (const error::LogError& e) {
+                        if (err_stream) {
+                            *err_stream << smyt << e.what() << '\n';
+                        }
+                    }
+
+                    return;
+                }
+            }
+
+            {
+                const std::string command {"iptables -A " + rule};
+
+                const int result {std::system(command.c_str())};
+
+                if (WEXITSTATUS(result) != 0) {
+                    try {
+                        logging::log("Error adding a new firewall rule: " + rule);
+                    } catch (const error::LogError& e) {
+                        if (err_stream) {
+                            *err_stream << smyt << e.what() << '\n';
+                        }
+                    }
+
+                    return;
+                }
+
+                try {
+                    logging::log("Successfully added a new firewall rule: " + rule);
+                } catch (const error::LogError& e) {
+                    if (err_stream) {
+                        *err_stream << smyt << e.what() << '\n';
+                    }
+                }
+
+                state.blocked_addresses.push_back(ip_address);
+            }
+        }
+
+        static void find_attacker_to_block(State& state, std::ostream* err_stream) {
+            std::vector<std::uint32_t> addresses;
+
+            // Gather addresses that are not already blocked
+            for (const auto& packet : state.syn_packets) {
+                if (std::find(state.blocked_addresses.cbegin(), state.blocked_addresses.cend(), packet.src_address) != state.blocked_addresses.cend()) {
+                    continue;
+                }
+
+                addresses.push_back(packet.src_address);
+            }
+
+            std::uint32_t address {};
+            std::size_t frequency {};
+
+            // Find the most frequent address
+            if (!helpers::most_common(addresses, address, frequency)) {
+                return;
+            }
+
+            // Ignore, if that address didn't sent too many packets in the process interval
+            if (frequency < 10u) {
+                return;
+            }
+
+            // Address can't be already blocked, so block it
+            block_attacker_by_address(address, state, err_stream);
+        }
+
         static void process_data_so_far(State& state, const configuration::Config& config, std::ostream* err_stream) {
 #if 1
             if (err_stream) {
@@ -179,7 +317,7 @@ namespace capture {
             if (state.panic_mode) {
                 state.syn_packet_count += packets_since_last_process;
 
-                if (packets_since_last_process <= config.warning_threshold) {
+                if (packets_since_last_process <= config.panic_threshold) {
                     state.panic_mode = false;
                     const auto total {std::exchange(state.syn_packet_count, 0u)};
 
@@ -194,7 +332,11 @@ namespace capture {
                             *err_stream << smyt << e.what() << '\n';
                         }
                     }
+
+                    goto purge_data;
                 }
+
+                find_attacker_to_block(state, err_stream);
 
                 goto purge_data;
             }
@@ -214,12 +356,14 @@ namespace capture {
                         *err_stream << smyt << e.what() << '\n';
                     }
                 }
+
+                find_attacker_to_block(state, err_stream);
             } else if (packets_since_last_process > config.warning_threshold) {
                 try {
                     logging::log(
                         "Warning! Too many SYN packets. " +
                         std::to_string(packets_since_last_process) +
-                        " SYN packets so far."
+                        " SYN in the last interval."
                     );
                 } catch (const error::LogError& e) {
                     if (err_stream) {
@@ -245,16 +389,11 @@ namespace capture {
 
             stream.fill('0');
 
-            auto ts {helpers::ts(&timestamp)};
-            ts.erase(ts.size() - 1u);
-
-            stream << std::dec << ts << ' ' << length;
-
             if (ether == nullptr) {
                 return;
             }
 
-            stream << " Ether ";
+            stream << "Ether ";
 
             stream << std::hex
                 << std::setw(2) << static_cast<unsigned int>(ether->ether_shost[0u])
@@ -312,10 +451,10 @@ namespace capture {
         static void processing(SessionData& data) {
             while (true) {
                 std::unique_lock<std::mutex> lock {data.mutex};
-                data.cv.wait_for(lock, std::chrono::seconds(data.config.process_period), [&data]() {
+                data.cv.wait_for(lock, std::chrono::seconds(data.config.process_interval), [&data]() {
                     const auto now {std::chrono::seconds(std::time(nullptr)).count()};
 
-                    return now - data.last_process >= data.config.process_period || !data.processing;
+                    return now - data.last_process >= data.config.process_interval || !data.processing;
                 });
 
                 if (!data.processing) {
@@ -378,7 +517,16 @@ namespace capture {
         data.config = config;
         data.err_stream = err_stream;
         data.callback = internal::packet;
+        data.state.blocked_addresses = internal::retrieve_blocked_attackers(err_stream);
         data.thread = std::thread(internal::processing, std::ref(data));
+
+        try {
+            logging::log("Read " + std::to_string(data.state.blocked_addresses.size()) + " blocked IP addresses");
+        } catch (const error::LogError& e) {
+            if (err_stream) {
+                *err_stream << smyt << e.what() << '\n';
+            }
+        }
 
         const int result {
             pcap_loop(

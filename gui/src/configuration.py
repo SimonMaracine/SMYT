@@ -10,7 +10,7 @@ class ConfigError(RuntimeError):
 
 @dataclasses.dataclass(frozen=True)
 class Config:
-    process_period: int = 0
+    process_interval: int = 0
     warning_threshold: int = 0
     panic_threshold: int = 0
     device: str = ""
@@ -30,19 +30,19 @@ def read_configuration() -> Config:
         raise ConfigError(f"Unexpected error reading configuration: {err}")
 
     try:
-        process_period = configuration["process_period"]
+        process_interval = configuration["process_interval"]
         warning_threshold = configuration["warning_threshold"]
         panic_threshold = configuration["panic_threshold"]
         device = configuration["device"]
     except (KeyError, Exception) as err:
         raise ConfigError(f"Unexpected error reading configuration: {err}")
 
-    return Config(process_period, warning_threshold, panic_threshold, device)
+    return Config(process_interval, warning_threshold, panic_threshold, device)
 
 
 def dump_configuration(config: Config) -> str:
     configuration = {}
-    configuration["process_period"] = config.process_period
+    configuration["process_interval"] = config.process_interval
     configuration["warning_threshold"] = config.warning_threshold
     configuration["panic_threshold"] = config.panic_threshold
     configuration["device"] = config.device

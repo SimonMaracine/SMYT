@@ -175,18 +175,18 @@ class Smyt(tk.Frame):
         frm_options.rowconfigure(2, weight=1)
         frm_options.rowconfigure(3, weight=4)
 
-        self._var_process_period = tk.StringVar(frm_options)
+        self._var_process_interval = tk.StringVar(frm_options)
         self._var_warning_threshold = tk.StringVar(frm_options)
         self._var_panic_threshold = tk.StringVar(frm_options)
         self._var_device = tk.StringVar(frm_options)
 
-        tk.Label(frm_options, text="process_period").grid(row=0, column=0, sticky="new")
+        tk.Label(frm_options, text="process_interval").grid(row=0, column=0, sticky="new")
         tk.Label(frm_options, text="warning_threshold").grid(row=1, column=0, sticky="new")
         tk.Label(frm_options, text="panic_threshold").grid(row=2, column=0, sticky="new")
         tk.Label(frm_options, text="device").grid(row=3, column=0, sticky="new")
 
-        self._ent_process_period = tk.Entry(frm_options, textvariable=self._var_process_period, state="disabled")
-        self._ent_process_period.grid(row=0, column=1, sticky="new", padx=10, pady=(0, 10))
+        self._ent_process_interval = tk.Entry(frm_options, textvariable=self._var_process_interval, state="disabled")
+        self._ent_process_interval.grid(row=0, column=1, sticky="new", padx=10, pady=(0, 10))
         self._ent_warning_threshold = tk.Entry(frm_options, textvariable=self._var_warning_threshold, state="disabled")
         self._ent_warning_threshold.grid(row=1, column=1, sticky="new", padx=10, pady=(0, 10))
         self._ent_panic_threshold = tk.Entry(frm_options, textvariable=self._var_panic_threshold, state="disabled")
@@ -244,7 +244,7 @@ class Smyt(tk.Frame):
         self._var_config_timer.set(self._config_timer)
         self._config_saver.start()
 
-        self._ent_process_period["state"] = "normal"
+        self._ent_process_interval["state"] = "normal"
         self._ent_warning_threshold["state"] = "normal"
         self._ent_panic_threshold["state"] = "normal"
         self._ent_device["state"] = "normal"
@@ -261,7 +261,7 @@ class Smyt(tk.Frame):
         self._var_config_timer.set("")
         self._config_timer = None
 
-        self._ent_process_period["state"] = "disabled"
+        self._ent_process_interval["state"] = "disabled"
         self._ent_warning_threshold["state"] = "disabled"
         self._ent_panic_threshold["state"] = "disabled"
         self._ent_device["state"] = "disabled"
@@ -271,7 +271,7 @@ class Smyt(tk.Frame):
         self._btn_save["state"] = "disabled"
 
         config = configuration.Config(
-            self._var_process_period.get(),
+            self._var_process_interval.get(),
             self._var_warning_threshold.get(),
             self._var_panic_threshold.get(),
             self._var_device.get()
@@ -345,7 +345,7 @@ class Smyt(tk.Frame):
             messagebox.showerror("Configuration Error", err)
             config = configuration.Config()
 
-        self._var_process_period.set(config.process_period)
+        self._var_process_interval.set(config.process_interval)
         self._var_warning_threshold.set(config.warning_threshold)
         self._var_panic_threshold.set(config.panic_threshold)
         self._var_device.set(config.device)
@@ -395,7 +395,7 @@ class Smyt(tk.Frame):
         return True
 
     def _discard_configuration_changes(self):
-        self._var_process_period.set(self._config.process_period)
+        self._var_process_interval.set(self._config.process_interval)
         self._var_warning_threshold.set(self._config.warning_threshold)
         self._var_panic_threshold.set(self._config.panic_threshold)
         self._var_device.set(self._config.device)
@@ -404,7 +404,7 @@ class Smyt(tk.Frame):
         self._var_config_timer.set("")
         self._config_timer = None
 
-        self._ent_process_period["state"] = "disabled"
+        self._ent_process_interval["state"] = "disabled"
         self._ent_warning_threshold["state"] = "disabled"
         self._ent_panic_threshold["state"] = "disabled"
         self._ent_device["state"] = "disabled"
