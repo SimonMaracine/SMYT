@@ -1,6 +1,12 @@
 #include "helpers.hpp"
 
+#include <unordered_map>
+#include <algorithm>
+
 #include <arpa/inet.h>
+
+// pton https://man7.org/linux/man-pages/man3/inet_pton.3.html
+// max_element https://en.cppreference.com/w/cpp/algorithm/max_element
 
 namespace helpers {
     std::uint16_t ntoh(std::uint16_t x) {
@@ -14,12 +20,45 @@ namespace helpers {
     std::string ntop(const void* x) {
         char result[32u] {};
 
-        inet_ntop(AF_INET, x, result, INET_ADDRSTRLEN);
+        inet_ntop(AF_INET, x, result, INET_ADDRSTRLEN);  // TODO error
+
+        return result;
+    }
+
+    std::optional<std::uint32_t> pton(const char* x) {
+        std::uint32_t result {};
+
+        if (!inet_pton(AF_INET, x, &result)) {
+            return std::nullopt;
+        }
 
         return result;
     }
 
     std::string ts(const std::time_t* x) {
         return std::asctime(std::localtime(x));
+    }
+
+    bool most_common(const std::vector<std::uint32_t>& x, std::uint32_t& out_result, std::size_t& out_frequency) {
+        if (x.empty()) {
+            return false;
+        }
+
+        std::unordered_map<std::uint32_t, std::size_t> frequency;
+
+        for (const auto item : x) {
+            frequency[item]++;
+        }
+
+        const auto result {
+            std::max_element(frequency.begin(), frequency.end(), [](const auto& lhs, const auto& rhs) {
+                return lhs.second < rhs.second;
+            })
+        };
+
+        out_result = result->first;
+        out_frequency = result->second;
+
+        return true;
     }
 }

@@ -16,7 +16,7 @@
 
 #include "configuration.hpp"
 
-#define SMYT_LOG_PACKETS 1
+#define SMYT_LOG_PACKETS 0
 
 namespace capture {
     struct SessionData;
@@ -45,6 +45,8 @@ namespace capture {
         bool panic_mode {false};  // Scan in progress
         std::size_t syn_packet_count {};
         std::vector<SynPacket> syn_packets;
+
+        std::vector<std::uint32_t> blocked_addresses;
     };
 
     struct SessionData {
