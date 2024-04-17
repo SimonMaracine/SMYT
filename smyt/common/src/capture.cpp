@@ -245,16 +245,11 @@ namespace capture {
 
             stream.fill('0');
 
-            auto ts {helpers::ts(&timestamp)};
-            ts.erase(ts.size() - 1u);
-
-            stream << std::dec << ts << ' ' << length;
-
             if (ether == nullptr) {
                 return;
             }
 
-            stream << " Ether ";
+            stream << "Ether ";
 
             stream << std::hex
                 << std::setw(2) << static_cast<unsigned int>(ether->ether_shost[0u])
