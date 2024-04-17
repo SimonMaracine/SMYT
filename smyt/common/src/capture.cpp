@@ -179,7 +179,7 @@ namespace capture {
             if (state.panic_mode) {
                 state.syn_packet_count += packets_since_last_process;
 
-                if (packets_since_last_process <= config.warning_threshold) {
+                if (packets_since_last_process <= config.panic_threshold) {
                     state.panic_mode = false;
                     const auto total {std::exchange(state.syn_packet_count, 0u)};
 
@@ -219,7 +219,7 @@ namespace capture {
                     logging::log(
                         "Warning! Too many SYN packets. " +
                         std::to_string(packets_since_last_process) +
-                        " SYN packets so far."
+                        " SYN in the last interval."
                     );
                 } catch (const error::LogError& e) {
                     if (err_stream) {
@@ -312,10 +312,10 @@ namespace capture {
         static void processing(SessionData& data) {
             while (true) {
                 std::unique_lock<std::mutex> lock {data.mutex};
-                data.cv.wait_for(lock, std::chrono::seconds(data.config.process_period), [&data]() {
+                data.cv.wait_for(lock, std::chrono::seconds(data.config.process_interval), [&data]() {
                     const auto now {std::chrono::seconds(std::time(nullptr)).count()};
 
-                    return now - data.last_process >= data.config.process_period || !data.processing;
+                    return now - data.last_process >= data.config.process_interval || !data.processing;
                 });
 
                 if (!data.processing) {

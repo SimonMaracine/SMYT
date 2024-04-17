@@ -22,7 +22,7 @@ namespace configuration {
         Config default_config;
 
         nlohmann::json root;
-        root["process_period"] = default_config.process_period;
+        root["process_interval"] = default_config.process_interval;
         root["warning_threshold"] = default_config.warning_threshold;
         root["panic_threshold"] = default_config.panic_threshold;
         root["device"] = default_config.device;
@@ -64,7 +64,7 @@ namespace configuration {
         }
 
         try {
-            config.process_period = root["process_period"].get<long>();
+            config.process_interval = root["process_interval"].get<long>();
             config.warning_threshold = root["warning_threshold"].get<std::size_t>();
             config.panic_threshold = root["panic_threshold"].get<std::size_t>();
             config.device = root["device"].get<std::string>();
