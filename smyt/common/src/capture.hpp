@@ -17,6 +17,7 @@
 #include "configuration.hpp"
 
 #define SMYT_LOG_PACKETS 0
+#define SMYT_PRINT_PROCESSING 0
 
 namespace capture {
     struct SessionData;
@@ -37,7 +38,6 @@ namespace capture {
 
     struct SynPacket {
         std::uint32_t src_address {};
-        std::uint32_t dst_address {};
         long timestamp {};
     };
 

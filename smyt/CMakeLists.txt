@@ -11,5 +11,5 @@ add_subdirectory(extern/cargs)
 add_subdirectory(extern/json)
 
 add_subdirectory(common)
-add_subdirectory(cmd)
+add_subdirectory(cli)
 add_subdirectory(service)

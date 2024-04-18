@@ -5,6 +5,7 @@
 
 #include <arpa/inet.h>
 
+// ntop https://man7.org/linux/man-pages/man3/inet_ntop.3.html
 // pton https://man7.org/linux/man-pages/man3/inet_pton.3.html
 // max_element https://en.cppreference.com/w/cpp/algorithm/max_element
 
@@ -17,10 +18,12 @@ namespace helpers {
         return ntohl(x);
     }
 
-    std::string ntop(const void* x) {
+    std::optional<std::string> ntop(const void* x) {
         char result[32u] {};
 
-        inet_ntop(AF_INET, x, result, INET_ADDRSTRLEN);  // TODO error
+        if (!inet_ntop(AF_INET, x, result, INET_ADDRSTRLEN)) {
+            return std::nullopt;
+        }
 
         return result;
     }
