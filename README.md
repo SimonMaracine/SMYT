@@ -27,7 +27,7 @@ SYN scan or not:
 In panic mode, SMYT also takes action by blocking the source addresses from which the SYN packets come. It interacts
 with the firewall through `iptables`.
 
-## Service and CLI
+## Service And CLI
 
 SMYT comes in two forms: as a command line program and as a `systemd` service. The former is rather for testing
 purposes and the latter is meant for actual use.
@@ -49,3 +49,11 @@ file.
 - dnf install systemd-devel.x86_64
 - apt install libpcap-dev
 - apt install libsystemd-dev
+
+## Building And Testing
+
+SMYT was compiled with `GCC 13.2` (`C++20`) and `Python 3.12` and was run and tested on a `Fedora` and an `Ubuntu`
+machine, both `64-bit`.
+
+SMYT can easily block very simple DoS attacks with firewall rules (for example, `nmap` + `tcpdump` + `tcpreplay`),
+as testing suggested, but it may struggle with anything more advanced than that or with big DDoS attacks.
