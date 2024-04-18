@@ -7,7 +7,8 @@ SMYT is security program for the `Linux` platform that monitors network traffic,
 
 Too many `SYN` packets in a short amount of time are usually a sign of port scanning, or SYN scanning and they
 could indicate the beginning of DoS attacks. The purpose of this program is then to detect such events and report
-them to the user, so that they know to quickly take some action.
+them to the user through log files, so that they know to take some action. SMYT will also try to mitigate these
+attacks by interacting with the firewall.
 
 *SMYT* is an acronym and it means *SMYT Monitors Your Traffic*. Not the best name. But
 [naming things](https://martinfowler.com/bliki/TwoHardThings.html) is hard.
