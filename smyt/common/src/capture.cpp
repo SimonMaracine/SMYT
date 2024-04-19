@@ -203,7 +203,7 @@ namespace capture {
         }
 
         static std::vector<std::uint32_t> retrieve_blocked_attackers(std::ostream* err_stream) {
-            const char* command {"iptables -L INPUT | awk 'NR>2 { print $4 }' > " BLOCKED_LIST_FILE_PATH};
+            const char* command {R"(iptables -L INPUT -n | awk 'NR > 2 && $1 == "DROP" && $2 == "0" { print $4 }' > )" BLOCKED_LIST_FILE_PATH};
             const int result {std::system(command)};
 
             if (WEXITSTATUS(result) != 0) {

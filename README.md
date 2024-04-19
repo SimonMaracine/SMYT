@@ -53,7 +53,7 @@ file.
 
 ## Building And Testing
 
-SMYT was compiled with `GCC 13.2` (`C++20`) and `Python 3.12` and was run and tested on a `Fedora` and an `Ubuntu`
+SMYT was compiled with `GCC 13.2` (`C++20`) and `Python 3.12` and was run and tested on a `Fedora` and an `Xubuntu`
 machine, both `64-bit`.
 
 SMYT can easily block very simple DoS attacks with firewall rules (for example, `nmap` + `tcpdump` + `tcpreplay`),
