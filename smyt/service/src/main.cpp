@@ -101,7 +101,7 @@ error_capture:
 error_logging:
     logging::uninitialize();
 
-    sdaemon::notify_stopping();
+    sdaemon::notify_stopping(false);
 
     return 1;
 }

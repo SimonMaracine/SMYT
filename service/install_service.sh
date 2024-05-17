@@ -7,4 +7,4 @@ mkdir --parents /opt/smyt/
 cp $EXECUTABLE /opt/smyt/$EXECUTABLE
 cp $SERVICE /etc/systemd/system/$SERVICE
 
-systemctl enable smyt.service
+systemctl enable $SERVICE

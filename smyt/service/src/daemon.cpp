@@ -12,8 +12,12 @@ namespace sdaemon {
         sd_notify(0, "READY=1\nSTATUS=Running");
     }
 
-    void notify_stopping() {
-        sd_notify(0, "STOPPING=1\nSTATUS=Stopped");
+    void notify_stopping(bool set_status) {
+        if (set_status) {
+            sd_notify(0, "STOPPING=1\nSTATUS=Stopped");
+        } else {
+            sd_notify(0, "STOPPING=1\n");
+        }
     }
 
     void notify_on_error(const char* format, ...) {
